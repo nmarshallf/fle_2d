@@ -22,8 +22,8 @@ norm = lambda x: np.linalg.norm(x)
 
 def main():
     
-    nmax = 10000#3000
-    nt = 5000#3000
+    nmax = 3000
+    nt = 2500
     table = np.zeros((nmax+1,nt)) 
     table_scipy = np.zeros((nmax+1,nt))
 
