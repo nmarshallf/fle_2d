@@ -9,10 +9,10 @@ pip install numpy scipy finufft joblib
 # install package
 pip install fle-2d
 
-# download tests folder
+# download tests folder (optional)
 svn checkout https://github.com/nmarshallf/fle_2d/trunk/tests
 
-# run test code
+# run test code (optional)
 cd tests
 python3 test_fle_2d.py
 ```
