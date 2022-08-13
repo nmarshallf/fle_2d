@@ -386,12 +386,12 @@ class FLEBasis2D:
         return a
 
 
-    def expand_ctf(self, voltage_list, Cs_list, alpha_list, defocus_list, pixel_size):
+    def expand_ctf(self, voltage_list, cs_list, alpha_list, defocus_list, pixel_size):
         pts = self.pts
         h = self.h
         wavelength_list = 12.2643247 / np.sqrt(voltage_list * 1e3 + 0.978466 * voltage_list ** 2)
         c2_vec = (-np.pi * wavelength_list * defocus_list).reshape(-1,1)
-        c4_vec = (0.5 * np.pi * (Cs_list * 1e7) * wavelength_list ** 3).reshape(-1,1)
+        c4_vec = (0.5 * np.pi * (cs_list * 1e7) * wavelength_list ** 3).reshape(-1,1)
 
         r2 = (pts * h / (pixel_size * 2 * np.pi)) ** 2
         r4 = r2 ** 2
