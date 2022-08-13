@@ -229,7 +229,49 @@ class FLEBasis2D:
             nus[2 * i] = i
         c2r_nus = self.precomp_transform_complex_to_real(nus)
         r2c_nus = spr.csr_matrix(c2r_nus.transpose().conj())
+        
+        xs = 1 - (2 * np.arange(n_radial) + 1) / (2 * n_radial)
+        xs = np.cos(np.pi * xs)
+        pts = (xs + 1) / 2
+        pts = (lmd1 - lmd0) * pts + lmd0
+        pts = pts.reshape(-1, 1)
 
+
+        blk_size = np.zeros(2 * nmax + 1)
+        for i in range(2 * nmax + 1):
+            blk_size[i] = len(idx_list[i])
+
+        blk_size = blk_size.astype(int)
+        k_max = blk_size[::2]
+        blk_ind = np.concatenate((np.zeros(1), np.cumsum(blk_size)))
+        blk_ind = blk_ind.astype(int)
+        n_blk = len(blk_ind) - 1
+        indices_sgns = np.zeros(ne, dtype=int)
+        indices_ells = np.zeros(ne, dtype=int)
+        i = 0
+        ci = 0
+        for ell in range(nmax + 1):
+            sgns = (1,) if ell == 0 else (1, -1)
+            ks = np.arange(0, k_max[ell])
+
+            for sgn in sgns:
+                rng = np.arange(i, i + len(ks))
+                indices_ells[rng] = ell
+                indices_sgns[rng] = sgn
+
+                i += len(ks)
+
+            ci += len(ks)
+
+
+
+        self.indices_sgns = indices_sgns
+        self.indices_ells = indices_ells
+        self.pts = pts
+        self.blk_ind = blk_ind
+        self.k_max = k_max
+        self.n_blk = n_blk
+        self.blk_size = blk_size
         self.ns = ns
         self.ks = ks
         self.lmds = lmds
@@ -262,10 +304,7 @@ class FLEBasis2D:
         if L < 16:
             self.B = self.create_denseB()
 
-        xs = 1 - (2 * np.arange(self.n_radial) + 1) / (2 * self.n_radial)
-        xs = np.cos(np.pi * xs)
-        pts = (xs + 1) / 2
-        pts = (self.lmd1 - self.lmd0) * pts + self.lmd0
+
         R = L // 2
         h = 1 / R
         phi = 2 * np.pi * np.arange(self.n_angular // 2) / self.n_angular
@@ -273,7 +312,6 @@ class FLEBasis2D:
         x = x.reshape(1, -1)
         y = np.sin(phi)
         y = y.reshape(1, -1)
-        pts = pts.reshape(-1, 1)
         x = x * pts * h
         y = y * pts * h
         x = x.flatten()
