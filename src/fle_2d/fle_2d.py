@@ -371,7 +371,7 @@ class FLEBasis2D:
         idx_list = self.idx_list
         for i in range(len(blk_ind) - 1):
             idx_i = idx_list[i]
-            a_ordered[:, blk_ind[i]:blk_ind[i + 1]] = a[:, idx_i]
+            a_ordered[blk_ind[i]:blk_ind[i + 1]] = a[idx_i]
 
         return a_ordered
 
@@ -381,7 +381,7 @@ class FLEBasis2D:
         idx_list = self.idx_list
         for i in range(len(blk_ind) - 1):
             idx_i = idx_list[i]
-            a[:, idx_i] = a_ordered[:, blk_ind[i]:blk_ind[i + 1]]
+            a[idx_i] = a_ordered[blk_ind[i]:blk_ind[i + 1]]
 
         return a
 
