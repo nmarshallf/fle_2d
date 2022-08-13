@@ -363,6 +363,53 @@ class FLEBasis2D:
             a_conv = self.c2r @ (b * (self.r2c @ a).flatten())
 
         return a_conv.flatten()
+    
+    
+    def to_angular_order(self, a):
+        a_ordered = np.zeros_like(a)
+        blk_ind = self.blk_ind
+        idx_list = self.idx_list
+        for i in range(len(blk_ind) - 1):
+            idx_i = idx_list[i]
+            a_ordered[:, blk_ind[i]:blk_ind[i + 1]] = a[:, idx_i]
+
+        return a_ordered
+
+    def to_eigen_order(self, a_ordered):
+        a = np.zeros_like(a_ordered)
+        blk_ind = self.blk_ind
+        idx_list = self.idx_list
+        for i in range(len(blk_ind) - 1):
+            idx_i = idx_list[i]
+            a[:, idx_i] = a_ordered[:, blk_ind[i]:blk_ind[i + 1]]
+
+        return a
+
+
+    def expand_ctf(self, voltage_list, Cs_list, alpha_list, defocus_list, pixel_size):
+        pts = self.pts
+        h = self.h
+        wavelength_list = 12.2643247 / np.sqrt(voltage_list * 1e3 + 0.978466 * voltage_list ** 2)
+        c2_vec = (-np.pi * wavelength_list * defocus_list).reshape(-1,1)
+        c4_vec = (0.5 * np.pi * (Cs_list * 1e7) * wavelength_list ** 3).reshape(-1,1)
+
+        r2 = (pts * h / (pixel_size * 2 * np.pi)) ** 2
+        r4 = r2 ** 2
+        gamma = r2 @ c2_vec.T + r4 @ c4_vec.T
+        ctf_radial = np.sqrt(1 - alpha_list ** 2) * np.sin(gamma) - alpha_list * np.cos(gamma)
+
+        if self.n_interp > self.n_radial:
+            ctf_radial = dct(ctf_radial, axis=0, type=2) / (2 * self.n_radial)
+            ctf_radial_z = np.zeros(ctf_radial.shape)
+            ctf_radial = np.concatenate((ctf_radial, ctf_radial_z), axis=0)
+            ctf_radial = idct(ctf_radial, axis=0, type=2) * 2 * ctf_radial.shape[0]
+
+        rwts_mat = np.zeros((self.ne, len(voltage_list)), dtype=np.float64)
+
+        for i in range(self.ndmax + 1):
+            rwts_mat[self.idx_list[i], :] = self.A3[i] @ ctf_radial
+
+        return rwts_mat.T
 
     def rotate(self, a, theta):
 
