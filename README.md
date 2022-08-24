@@ -13,7 +13,7 @@ pip install fle-2d
 svn checkout https://github.com/nmarshallf/fle_2d/trunk/tests
 cd tests
 # (alternatively) if svn is not installed, you can:
-# download the project as a zip file, unzip, and navigate to the tests folder
+# download the project as a zip file, unzip, and navigate to the tests folder.
 
 # run test code (optional)
 python3 test_fle_2d.py
