@@ -2,7 +2,7 @@
 
 Installing using pip
 
-```rb
+```bash
 # install dependencies
 pip install numpy scipy finufft joblib
 
