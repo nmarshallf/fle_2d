@@ -18,13 +18,13 @@ class FLEBasis2D:
     #   mode        choose either "real" or "complex" output
     #
     def __init__(
-        self,
-        L,
-        bandlimit,
-        eps,
-        maxitr=None,
-        maxfun=None,
-        mode="real",
+            self,
+            L,
+            bandlimit,
+            eps,
+            maxitr=None,
+            maxfun=None,
+            mode="real",
     ):
 
         realmode = mode == "real"
@@ -46,7 +46,6 @@ class FLEBasis2D:
             numsparse = 8
             maxitr = 1 + int(np.log2(L)) // 2
 
-
         self.W = self.precomp(
             L,
             bandlimit,
@@ -56,13 +55,13 @@ class FLEBasis2D:
         )
 
     def precomp(
-        self,
-        L,
-        bandlimit,
-        eps,
-        maxitr,
-        numsparse,
-        maxfun=None,
+            self,
+            L,
+            bandlimit,
+            eps,
+            maxitr,
+            numsparse,
+            maxfun=None,
     ):
 
         # see {eq:num_radial_nodes}
@@ -88,7 +87,7 @@ class FLEBasis2D:
         if maxfun:
             ne = maxfun
         else:
-            ne = int(L**2 * np.pi / 4)
+            ne = int(L ** 2 * np.pi / 4)
 
         max_bandlimit = L
         psi, ns, ks, lmds, cs, ne = self.lap_eig_disk(
@@ -190,7 +189,7 @@ class FLEBasis2D:
         xs, ys = np.meshgrid(x, y)
         xs = xs / R
         ys = ys / R
-        rs = np.sqrt(xs**2 + ys**2)
+        rs = np.sqrt(xs ** 2 + ys ** 2)
 
         idx = rs > 1 + 1e-13
 
@@ -205,10 +204,10 @@ class FLEBasis2D:
         S = int(max(7.08 * L, -np.log2(eps) + 2 * np.log2(L)))
         n_angular = S
         for svar in range(
-            int(lmd1 + ndmax) + 1, S + 1
+                int(lmd1 + ndmax) + 1, S + 1
         ):  # we used s somewhere else, so using svar here
             tmp = (
-                L**2 * ((lmd1 + ndmax) / svar) ** svar
+                    L ** 2 * ((lmd1 + ndmax) / svar) ** svar
             )  # ndmax = n_m from the writeup, right?
             if tmp <= eps:
                 n_angular = int(max(int(svar), np.log2(1 / eps)))
@@ -230,13 +229,11 @@ class FLEBasis2D:
         c2r_nus = self.precomp_transform_complex_to_real(nus)
         r2c_nus = spr.csr_matrix(c2r_nus.transpose().conj())
 
-
         xs = 1 - (2 * np.arange(n_radial) + 1) / (2 * n_radial)
         xs = np.cos(np.pi * xs)
         pts = (xs + 1) / 2
         pts = (lmd1 - lmd0) * pts + lmd0
         pts = pts.reshape(-1, 1)
-
 
         blk_size = np.zeros(2 * nmax + 1)
         for i in range(2 * nmax + 1):
@@ -265,7 +262,7 @@ class FLEBasis2D:
             ci += len(ks)
 
         ind_vec = (nus % 2 - 2) * -np.sign(nus)
-        
+
         self.ind_vec = ind_vec
         self.indices_sgns = indices_sgns
         self.indices_ells = indices_ells
@@ -306,8 +303,6 @@ class FLEBasis2D:
         if L < 16:
             self.B = self.create_denseB()
 
-
-
         R = L // 2
         h = 1 / R
         phi = 2 * np.pi * np.arange(self.n_angular // 2) / self.n_angular
@@ -319,7 +314,7 @@ class FLEBasis2D:
         y = y * pts * h
         x = x.flatten()
         y = y.flatten()
-        
+
         self.grid_x = x
         self.grid_y = y
         nufft_type = 2
@@ -344,7 +339,7 @@ class FLEBasis2D:
             b = idct(b, axis=0, type=2) * 2 * b.shape[0]
 
         h = self.h
-        h = self.h
+
 
         a = np.zeros(ne, dtype=np.float64)
 
@@ -359,7 +354,6 @@ class FLEBasis2D:
 
     def radialconv(self, a, f):
 
-
         a = a.flatten()
         b = self.radialconv_multipliers(f).flatten()
         if self.complexmode:
@@ -368,7 +362,6 @@ class FLEBasis2D:
             a_conv = self.c2r @ (b * (self.r2c @ a).flatten())
 
         return a_conv.flatten()
-
 
     def to_angular_order(self, a):
         a_ordered = np.zeros_like(a)
@@ -390,33 +383,38 @@ class FLEBasis2D:
 
         return a
 
-
-
     def expand_ctf(self, voltage_list, cs_list, alpha_list, defocus_list, pixel_size):
         pts = self.pts
         h = self.h
         wavelength_list = 12.2643247 / np.sqrt(voltage_list * 1e3 + 0.978466 * voltage_list ** 2)
-        c2_vec = (-np.pi * wavelength_list * defocus_list).reshape(-1,1)
-        c4_vec = (0.5 * np.pi * (cs_list * 1e7) * wavelength_list ** 3).reshape(-1,1)
+        c2_vec = (-np.pi * wavelength_list * defocus_list).reshape(-1, 1)
+        c4_vec = (0.5 * np.pi * (cs_list * 1e7) * wavelength_list ** 3).reshape(-1, 1)
 
         r2 = (pts * h / (pixel_size * 2 * np.pi)) ** 2
         r4 = r2 ** 2
         gamma = r2 @ c2_vec.T + r4 @ c4_vec.T
         ctf_radial = np.sqrt(1 - alpha_list ** 2) * np.sin(gamma) - alpha_list * np.cos(gamma)
 
-        if self.n_interp > self.n_radial:
-            ctf_radial = dct(ctf_radial, axis=0, type=2) / (2 * self.n_radial)
-            ctf_radial_z = np.zeros(ctf_radial.shape)
-            ctf_radial = np.concatenate((ctf_radial, ctf_radial_z), axis=0)
-            ctf_radial = idct(ctf_radial, axis=0, type=2) * 2 * ctf_radial.shape[0]
+        rwts_mat = self.expand_raidal_vec(ctf_radial.T)
 
-        rwts_mat = np.zeros((self.ne, len(voltage_list)), dtype=np.float64)
+        return rwts_mat
+    
+    def expand_raidal_vec(self, radial_vec):
+
+        radial_vec = radial_vec.T
+        if self.n_interp > self.n_radial:
+            radial_vec = dct(radial_vec, axis=0, type=2) / (2 * self.n_radial)
+            radial_vec_z = np.zeros(radial_vec.shape)
+            radial_vec = np.concatenate((radial_vec, radial_vec_z), axis=0)
+            radial_vec = idct(radial_vec, axis=0, type=2) * 2 * radial_vec.shape[0]
+
+        radial_fb = np.zeros((self.ne, radial_vec.shape[1]), dtype=np.float64)
 
         for i in range(self.ndmax + 1):
-            rwts_mat[self.idx_list[i], :] = self.A3[i] @ ctf_radial
+            radial_fb[self.idx_list[i], :] = self.A3[i] @ radial_vec
 
-        return rwts_mat.T
-
+        return radial_fb.T
+    
 
     def rotate(self, a, theta):
 
@@ -448,45 +446,13 @@ class FLEBasis2D:
         # Step 3.
         wts = self.radialconv_wts(b)
 
-        b = wts / self.h**2
+        b = wts / self.h ** 2
 
         ne = self.ne
         return b.reshape(ne)
 
-    def evaluate_t_loop(self, f):
-        # warper for evaluate_t_helper
 
-        if np.prod(f.shape) == self.L**2:
-            a = self.evaluate_t(f)
-        else:
-            N = f.shape[0]
-            if self.complexmode:
-                a = np.zeros((N, self.ne), dtype=np.complex128, order="C")
-            else:
-                a = np.zeros((N, self.ne), dtype=np.float64, order="C")
-            for i in range(N):
-                a[i, :] = self.evaluate_t(f[i, :, :])
 
-        return a
-
-    # def evaluate_t_vec(self, f):
-    #     # warper for evaluate_t_helper
-    #     a = self.evaluate_t_helper(f)
-    #
-    #     return a
-
-    def evaluate_loop(self, a):
-
-        if np.prod(a.shape) == self.ne:
-            f = self.evaluate(a)
-        else:
-            N = a.shape[0]
-            f = np.zeros((N, self.L, self.L), dtype=np.float64, order="C")
-            for i in range(N):
-                f[i, :, :] = self.evaluate(a[i, :])
-
-        return f
-    
 
     def evaluate_t(self, f):
         # see {sec:fast_details}
@@ -494,7 +460,6 @@ class FLEBasis2D:
         L = self.L
 
         if np.prod(f.shape) == self.L ** 2:
-
 
             f = np.copy(f).reshape(self.L, self.L)
 
@@ -508,6 +473,8 @@ class FLEBasis2D:
 
         else:
             nf = f.shape[0]
+
+            f = np.copy(f).reshape(nf, self.L, self.L)
 
             # For small images just use matrix multiplication
             if L < 16:
@@ -540,22 +507,19 @@ class FLEBasis2D:
 
         return a
 
-
-
     def evaluate(self, a):
         # see {rmk:how_to_apply_B} and {sec:fast_details}
-        
+
         L = self.L
 
         if np.prod(a.shape) == self.ne:
 
             if self.complexmode:
-    
                 a = np.real(self.c2r @ a.flatten())
                 a = a.reshape(self.ne)
 
             a = np.real(a)
-                # for small images use matrix multiplication
+            # for small images use matrix multiplication
             if self.L < 16:
                 return (self.B @ a).reshape(self.L, self.L)
 
@@ -568,7 +532,6 @@ class FLEBasis2D:
             if self.L < 16:
                 return (self.B @ a.T).reshape(na, self.L, self.L)
 
-                
         # B1
         b = self.step3_H(a)
 
@@ -583,7 +546,7 @@ class FLEBasis2D:
         else:
             na = a.shape[0]
             f = f.reshape(na, L, L)
-        
+
         return f
 
     def expand(self, f):
@@ -596,15 +559,14 @@ class FLEBasis2D:
 
     def step1(self, f):
 
-
         if np.prod(f.shape) == self.L ** 2:
             f = f.reshape(self.L, self.L)
             f = np.array(f, dtype=np.complex128)
             z = np.zeros((self.n_radial, self.n_angular), dtype=np.complex128)
-            z0 = self.plan2.execute(f) * self.h**2
+            z0 = self.plan2.execute(f) * self.h ** 2
             z0 = z0.reshape(self.n_radial, self.n_angular // 2)
             z[:, : self.n_angular // 2] = z0
-            z[:, self.n_angular // 2 :] = np.conj(z0)
+            z[:, self.n_angular // 2:] = np.conj(z0)
             z = z.flatten()
         else:
 
@@ -640,9 +602,8 @@ class FLEBasis2D:
             f[self.idx] = 0
 
             f = f.flatten()
-        
-        else:
 
+        else:
 
             nz = z.shape[0]
             z = z[:, :, : self.n_angular // 2]
@@ -654,7 +615,7 @@ class FLEBasis2D:
             f = np.real(f)
             f = f.reshape(nz, self.L, self.L)
             f[:, self.idx] = 0
-        
+
         return f
 
     def step2(self, z):
@@ -667,7 +628,7 @@ class FLEBasis2D:
             b = np.conj(b).T
             b = self.c2r_nus @ b
             b = np.real(b).T
-            
+
         else:
 
             nz = z.shape[0]
@@ -694,24 +655,23 @@ class FLEBasis2D:
                 b = dct(b, axis=0, type=2) / (2 * self.n_radial)
                 bz = np.zeros(b.shape)
                 b = np.concatenate((b, bz), axis=0)
-                b = idct(b, axis=0, type=2)*2*b.shape[0]
-    
+                b = idct(b, axis=0, type=2) * 2 * b.shape[0]
+
             h = self.h
-    
+
             a = np.zeros(self.ne, dtype=np.float64)
             y = [None] * (self.ndmax + 1)
-    
+
             for i in range(self.ndmax + 1):
                 y[i] = (self.A3[i] @ b[:, i]).flatten()
-    
+
             for i in range(self.ndmax + 1):
                 a[self.idx_list[i]] = y[i]
-    
+
             a = a * self.cs / h
             a = a.flatten()
-            
-        else:
 
+        else:
 
             nb = b.shape[0]
 
@@ -732,10 +692,8 @@ class FLEBasis2D:
             a = a.T
 
             a = a * self.cs / h
-    
-        return a
-        
 
+        return a
 
     def step3_H(self, a):
 
@@ -761,9 +719,9 @@ class FLEBasis2D:
                 b = dct(b, axis=0, type=2)
                 b = b[: self.n_radial, :]
                 b = idct(b, axis=0, type=2)
-                
+
         else:
-            
+
             na = a.shape[0]
 
             a = a.reshape(na, self.ne)
@@ -790,14 +748,14 @@ class FLEBasis2D:
         return b
 
     def step2_H(self, b):
-        
+
         if len(b.shape) == 2:
 
             tmp = np.zeros((b.shape[0], self.n_angular), dtype=np.complex128)
             tmp0 = (self.r2c_nus @ b.T).T
             tmp[:, self.nus] = np.conj(tmp0)
             z = np.fft.ifft(tmp, axis=1)
-            
+
         else:
 
             nb = b.shape[0]
@@ -814,7 +772,7 @@ class FLEBasis2D:
 
         return z
 
-    def create_denseB(self,numthread=1):
+    def create_denseB(self, numthread=1):
         # see {eq:operator_B} and {eq:operator_B^*}
 
         # Evaluate eigenfunctions
@@ -825,7 +783,7 @@ class FLEBasis2D:
         xs, ys = np.meshgrid(x, y)
         xs = xs / R
         ys = ys / R
-        rs = np.sqrt(xs**2 + ys**2)
+        rs = np.sqrt(xs ** 2 + ys ** 2)
         ts = np.arctan2(ys, xs)
 
         # Compute in parallel if numthread > 1
@@ -848,10 +806,10 @@ class FLEBasis2D:
                 B_par[:, :, i] = B_list[i]
             B = h * B_par
 
-        B = B.reshape(self.L**2, self.ne)
+        B = B.reshape(self.L ** 2, self.ne)
         B = self.transform_complex_to_real(np.conj(B), self.ns)
 
-        return B.reshape(self.L**2, self.ne)
+        return B.reshape(self.L ** 2, self.ne)
 
     def lap_eig_disk(self, ne, bandlimit, max_bandlimit):
 
@@ -867,7 +825,7 @@ class FLEBasis2D:
 
         # load table of roots of jn (the scipy code has an issue where it gets
         # stuck in an infinite loop in Newton's method as of Jun 2022)
-        path_to_module = os.path.dirname(__file__) 
+        path_to_module = os.path.dirname(__file__)
         zeros_path = os.path.join(path_to_module, "jn_zeros_n=3000_nt=2500.mat")
         data = loadmat(zeros_path)
         roots_table = data["roots_table"]
@@ -948,8 +906,8 @@ class FLEBasis2D:
                 # see {eq:eigenfun} and {eq:eigenfun_extend}
                 psi[i] = (
                     lambda r, t, n=n, c=c, lmd=lmd: c
-                    * spl.jv(n, lmd * r)
-                    * (r <= 1)
+                                                    * spl.jv(n, lmd * r)
+                                                    * (r <= 1)
                 )
             else:
                 # see {eq:eigenfun_const}
@@ -957,10 +915,10 @@ class FLEBasis2D:
                 # see {eq:eigenfun} and {eq:eigenfun_extend}
                 psi[i] = (
                     lambda r, t, c=c, n=n, lmd=lmd: c
-                    * spl.jv(n, lmd * r)
-                    * np.exp(1j * n * t)
-                    * (r <= 1)
-                    * (-1) ** np.abs(n)
+                                                    * spl.jv(n, lmd * r)
+                                                    * np.exp(1j * n * t)
+                                                    * (r <= 1)
+                                                    * (-1) ** np.abs(n)
                 )
             cs[i] = c
 
@@ -1061,12 +1019,12 @@ class FLEBasis2D:
         for i in range(len(a)):
             if self.lmds[k] / (np.pi) > (bandlimit - 1) // 2:
                 k = k - 1
-        a[k + 1 :] = 0
+        a[k + 1:] = 0
         return a
 
-#############################################################################
-#   Interpolation
-#############################################################################
+    #############################################################################
+    #   Interpolation
+    #############################################################################
 
     def barycentric_interp_sparse(self, x, xs, ys, s):
         # https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
