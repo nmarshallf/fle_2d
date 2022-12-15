@@ -250,16 +250,16 @@ class FLEBasis2D:
         ci = 0
         for ell in range(nmax + 1):
             sgns = (1,) if ell == 0 else (1, -1)
-            ks = np.arange(0, k_max[ell])
+            kstmp = np.arange(0, k_max[ell])
 
             for sgn in sgns:
-                rng = np.arange(i, i + len(ks))
+                rng = np.arange(i, i + len(kstmp))
                 indices_ells[rng] = ell
                 indices_sgns[rng] = sgn
 
-                i += len(ks)
+                i += len(kstmp)
 
-            ci += len(ks)
+            ci += len(kstmp)
 
         ind_vec = (nus % 2 - 2) * -np.sign(nus)
 
