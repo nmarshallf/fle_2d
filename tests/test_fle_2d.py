@@ -10,11 +10,11 @@ from scipy.io import loadmat
 
 def main():
 
-    ## test 1: Verify that code agrees with dense matrix mulitplication
+    # test 1: Verify that code agrees with dense matrix mulitplication
     print("test 1")
     test1_fle_vs_dense()
 
-    ### test 2: verify that code can lowpass
+    # test 2: verify that code can lowpass
     print("test 2")
     test2_fle_lowpass()
 
@@ -30,13 +30,17 @@ def main():
     print("test 5")
     test5_check_radialconv()
 
-    # Code test6: check that it works for tensor inputs
+    # test6: check that it works for tensor inputs
     print("test 6")
     test6_check_tensor_input_works()
 
-    # test 7 expand error
+    # test7: expand error
     print("test 7")
     test7_expand_error_test()
+
+    # test8: verify that the code works for images with odd dimensions
+    print("test 8")
+    test8_fle_vs_dense_odd()
 
     plt.show()
     return
@@ -470,6 +474,81 @@ def relerr(x, y):
     x = np.array(x).flatten()
     y = np.array(y).flatten()
     return np.linalg.norm(x - y) / np.linalg.norm(x)
+
+
+def test8_fle_vs_dense_odd():
+
+    Ls = (33,65)
+    ls = []
+    epss = []
+    for eps in (1e-4, 1e-7, 1e-10, 1e-14):
+        for l in Ls:
+            ls.append(l)
+            epss.append(eps)
+    n = len(ls)
+    erra = np.zeros(n)
+    errx = np.zeros(n)
+    for i in range(n):
+        erra[i], errx[i] = test8_fle_vs_dense_odd_helper(ls[i], epss[i])
+
+    # make {tab:accuracy}
+    print()
+    print(r"\begin{tabular}{r|ccc}")
+    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print(r"\hline")
+    for i in range(n):
+        print(
+            ls[i],
+            "&",
+            "{:12.5e}".format(epss[i]),
+            "&",
+            "{:12.5e}".format(erra[i]),
+            "&",
+            "{:12.5e}".format(errx[i]),
+            "\\\\",
+        )
+        if i % len(Ls) == len(Ls) - 1:
+            print(r"\hline")
+    print(r"\end{tabular}")
+    print("")
+
+
+def test8_fle_vs_dense_odd_helper(L, eps):
+
+    # Parameters
+    # Bandlimit scaled so that L is maximum suggested bandlimit
+
+    # Basis pre-computation
+    bandlimit = L
+    fle = FLEBasis2D(L, bandlimit, eps)
+    t1 = time.time()
+
+    # Create 
+    B = fle.create_denseB(numthread=10)
+
+    # load example image
+    datafile = "test_images/data_L=" + str(L) + ".mat"
+    data = loadmat(datafile)
+    x = data["x"]
+    x = x / np.max(np.abs(x.flatten()))
+    x = x.reshape((L**2, 1))
+
+    # evaluate_t
+    a_dense = B.T @ x
+    a_fle = fle.evaluate_t(x)
+
+    # evaluate
+    xlow_dense = B @ a_dense
+    xlow_fle = fle.evaluate(a_dense)
+
+    # printt
+
+    erra = relerr(a_dense, a_fle)
+    errx = relerr(xlow_dense, xlow_fle)
+
+    return erra, errx
+
+
 
 
 

@@ -18,13 +18,13 @@ class FLEBasis2D:
     #   mode        choose either "real" or "complex" output
     #
     def __init__(
-            self,
-            L,
-            bandlimit,
-            eps,
-            maxitr=None,
-            maxfun=None,
-            mode="real",
+        self,
+        L,
+        bandlimit,
+        eps,
+        maxitr=None,
+        maxfun=None,
+        mode="real",
     ):
 
         realmode = mode == "real"
@@ -55,14 +55,19 @@ class FLEBasis2D:
         )
 
     def precomp(
-            self,
-            L,
-            bandlimit,
-            eps,
-            maxitr,
-            numsparse,
-            maxfun=None,
+        self,
+        L,
+        bandlimit,
+        eps,
+        maxitr,
+        numsparse,
+        maxfun=None,
     ):
+
+        # ORIGINAL DIMENSIONS
+        self.L1 = L
+        # IF DIMENSIONS ARE ODD ADD ONE (WILL BE PADDING)
+        L = L + (L % 2)
 
         # see {eq:num_radial_nodes}
         # n_radial = int(max(2.1 * L, np.log2(1 / eps)))
@@ -204,10 +209,10 @@ class FLEBasis2D:
         S = int(max(7.08 * L, -np.log2(eps) + 2 * np.log2(L)))
         n_angular = S
         for svar in range(
-                int(lmd1 + ndmax) + 1, S + 1
+            int(lmd1 + ndmax) + 1, S + 1
         ):  # we used s somewhere else, so using svar here
             tmp = (
-                    L ** 2 * ((lmd1 + ndmax) / svar) ** svar
+                L ** 2 * ((lmd1 + ndmax) / svar) ** svar
             )  # ndmax = n_m from the writeup, right?
             if tmp <= eps:
                 n_angular = int(max(int(svar), np.log2(1 / eps)))
@@ -340,7 +345,6 @@ class FLEBasis2D:
 
         h = self.h
 
-
         a = np.zeros(ne, dtype=np.float64)
 
         y = [None] * (self.ndmax + 1)
@@ -369,7 +373,7 @@ class FLEBasis2D:
         idx_list = self.idx_list
         for i in range(len(blk_ind) - 1):
             idx_i = idx_list[i]
-            a_ordered[blk_ind[i]:blk_ind[i + 1]] = a[idx_i]
+            a_ordered[blk_ind[i] : blk_ind[i + 1]] = a[idx_i]
 
         return a_ordered
 
@@ -379,26 +383,34 @@ class FLEBasis2D:
         idx_list = self.idx_list
         for i in range(len(blk_ind) - 1):
             idx_i = idx_list[i]
-            a[idx_i] = a_ordered[blk_ind[i]:blk_ind[i + 1]]
+            a[idx_i] = a_ordered[blk_ind[i] : blk_ind[i + 1]]
 
         return a
 
-    def expand_ctf(self, voltage_list, cs_list, alpha_list, defocus_list, pixel_size):
+    def expand_ctf(
+        self, voltage_list, cs_list, alpha_list, defocus_list, pixel_size
+    ):
         pts = self.pts
         h = self.h
-        wavelength_list = 12.2643247 / np.sqrt(voltage_list * 1e3 + 0.978466 * voltage_list ** 2)
+        wavelength_list = 12.2643247 / np.sqrt(
+            voltage_list * 1e3 + 0.978466 * voltage_list ** 2
+        )
         c2_vec = (-np.pi * wavelength_list * defocus_list).reshape(-1, 1)
-        c4_vec = (0.5 * np.pi * (cs_list * 1e7) * wavelength_list ** 3).reshape(-1, 1)
+        c4_vec = (0.5 * np.pi * (cs_list * 1e7) * wavelength_list ** 3).reshape(
+            -1, 1
+        )
 
         r2 = (pts * h / (pixel_size * 2 * np.pi)) ** 2
         r4 = r2 ** 2
         gamma = r2 @ c2_vec.T + r4 @ c4_vec.T
-        ctf_radial = np.sqrt(1 - alpha_list ** 2) * np.sin(gamma) - alpha_list * np.cos(gamma)
+        ctf_radial = np.sqrt(1 - alpha_list ** 2) * np.sin(
+            gamma
+        ) - alpha_list * np.cos(gamma)
 
         rwts_mat = self.expand_raidal_vec(ctf_radial.T)
 
         return rwts_mat
-    
+
     def expand_raidal_vec(self, radial_vec):
 
         radial_vec = radial_vec.T
@@ -406,7 +418,9 @@ class FLEBasis2D:
             radial_vec = dct(radial_vec, axis=0, type=2) / (2 * self.n_radial)
             radial_vec_z = np.zeros(radial_vec.shape)
             radial_vec = np.concatenate((radial_vec, radial_vec_z), axis=0)
-            radial_vec = idct(radial_vec, axis=0, type=2) * 2 * radial_vec.shape[0]
+            radial_vec = (
+                idct(radial_vec, axis=0, type=2) * 2 * radial_vec.shape[0]
+            )
 
         radial_fb = np.zeros((self.ne, radial_vec.shape[1]), dtype=np.float64)
 
@@ -414,7 +428,6 @@ class FLEBasis2D:
             radial_fb[self.idx_list[i], :] = self.A3[i] @ radial_vec
 
         return radial_fb.T
-    
 
     def rotate(self, a, theta):
 
@@ -451,17 +464,21 @@ class FLEBasis2D:
         ne = self.ne
         return b.reshape(ne)
 
-
-
-
     def evaluate_t(self, f):
         # see {sec:fast_details}
 
+        # DIMENSIONS BEFORE PADDING
+        L1 = self.L1
+        # DIMENSINOS AFTER PADDING
         L = self.L
 
-        if np.prod(f.shape) == self.L ** 2:
+        if np.prod(f.shape) == self.L1 ** 2:
 
-            f = np.copy(f).reshape(self.L, self.L)
+            f = np.copy(f).reshape(self.L1, self.L1)
+
+            # ADD PADDING IF DIMENSIONS ODD
+            if L > L1:
+                f = np.pad(f,((0,1),(0,1)))
 
             # For small images just use matrix multiplication
             if L < 16:
@@ -473,8 +490,11 @@ class FLEBasis2D:
 
         else:
             nf = f.shape[0]
+            f = np.copy(f).reshape(nf, self.L1, self.L1)
 
-            f = np.copy(f).reshape(nf, self.L, self.L)
+            # ADD PADDING IF DIMENESIONS ODD
+            if L > L1:
+                f = np.pad(f,((0,0),(0,1),(0,1)))
 
             # For small images just use matrix multiplication
             if L < 16:
@@ -498,6 +518,7 @@ class FLEBasis2D:
 
         if self.complexmode:
 
+                # see {eq:eigenfun} and {eq:eigenfun_extend}
             if np.prod(f.shape) == self.L ** 2:
                 a = self.r2c @ a.flatten()
                 a = a.reshape(self.ne)
@@ -543,9 +564,17 @@ class FLEBasis2D:
 
         if np.prod(a.shape) == self.ne:
             f = f.reshape(L, L)
+
+            # REMOVE PADDING
+            if self.L > self.L1:
+                f = f[:self.L1,:self.L1]
         else:
             na = a.shape[0]
             f = f.reshape(na, L, L)
+
+            # REMOVE PADDING
+            if self.L > self.L1:
+                f = f[:,:self.L1,:self.L1]
 
         return f
 
@@ -566,7 +595,7 @@ class FLEBasis2D:
             z0 = self.plan2.execute(f) * self.h ** 2
             z0 = z0.reshape(self.n_radial, self.n_angular // 2)
             z[:, : self.n_angular // 2] = z0
-            z[:, self.n_angular // 2:] = np.conj(z0)
+            z[:, self.n_angular // 2 :] = np.conj(z0)
             z = z.flatten()
         else:
 
@@ -575,7 +604,9 @@ class FLEBasis2D:
             f = f.reshape(nf, L, L)
             f = np.array(f, dtype=np.complex128)
 
-            z = np.zeros((nf, self.n_radial, self.n_angular), dtype=np.complex128)
+            z = np.zeros(
+                (nf, self.n_radial, self.n_angular), dtype=np.complex128
+            )
             nufft_type = 2
             plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, eps=self.eps)
             plan2v.setpts(self.grid_x, self.grid_y)
@@ -584,7 +615,7 @@ class FLEBasis2D:
             z0 = z0.reshape(nf, self.n_radial, self.n_angular // 2)
 
             z[:, :, : self.n_angular // 2] = z0
-            z[:, :, self.n_angular // 2:] = np.conj(z0)
+            z[:, :, self.n_angular // 2 :] = np.conj(z0)
             z = z.reshape(nf, self.n_angular * self.n_radial)
 
         return z
@@ -608,7 +639,9 @@ class FLEBasis2D:
             nz = z.shape[0]
             z = z[:, :, : self.n_angular // 2]
             nufft_type = 1
-            plan1v = finufft.Plan(nufft_type, (self.L, self.L), n_trans=nz, eps=self.eps)
+            plan1v = finufft.Plan(
+                nufft_type, (self.L, self.L), n_trans=nz, eps=self.eps
+            )
             plan1v.setpts(self.grid_x, self.grid_y)
             f = plan1v.execute(z.reshape(nz, -1))
             f = f + np.conj(f)
@@ -733,7 +766,9 @@ class FLEBasis2D:
 
             a = a.T
             b = np.zeros(
-                (self.n_interp, 2 * self.nmax + 1, na), dtype=np.float64, order="F"
+                (self.n_interp, 2 * self.nmax + 1, na),
+                dtype=np.float64,
+                order="F",
             )
             for i in range(self.ndmax + 1):
                 b[:, i, :] = self.A3_T[i] @ a[self.idx_list[i]]
@@ -759,7 +794,9 @@ class FLEBasis2D:
         else:
 
             nb = b.shape[0]
-            tmp = np.zeros((b.shape[0], b.shape[1], self.n_angular), dtype=np.complex128)
+            tmp = np.zeros(
+                (b.shape[0], b.shape[1], self.n_angular), dtype=np.complex128
+            )
 
             b = np.swapaxes(b, 0, 2)
             b = b.reshape(-1, self.n_radial * nb)
@@ -806,10 +843,15 @@ class FLEBasis2D:
                 B_par[:, :, i] = B_list[i]
             B = h * B_par
 
-        B = B.reshape(self.L ** 2, self.ne)
+        # REMOVE ODD PADDING
+        if self.L > self.L1:
+            B = B[:self.L1,:self.L1,:]
+
+        B = B.reshape(self.L1 ** 2, self.ne)
         B = self.transform_complex_to_real(np.conj(B), self.ns)
 
-        return B.reshape(self.L ** 2, self.ne)
+
+        return B.reshape(self.L1 ** 2, self.ne)
 
     def lap_eig_disk(self, ne, bandlimit, max_bandlimit):
 
@@ -900,25 +942,21 @@ class FLEBasis2D:
             n = ns[i]
             lmd = lmds[i]
             # see {eq:eigenfun_const}
-            c = 1 / np.sqrt(0.5 * np.pi * spl.jv(ns[i] + 1, lmds[i]) ** 2)
+            c = 1 / np.sqrt(np.pi * spl.jv(ns[i] + 1, lmds[i]) ** 2)
             if ns[i] == 0:
-                c /= np.sqrt(2)
-                # see {eq:eigenfun} and {eq:eigenfun_extend}
                 psi[i] = (
                     lambda r, t, n=n, c=c, lmd=lmd: c
-                                                    * spl.jv(n, lmd * r)
-                                                    * (r <= 1)
+                    * spl.jv(n, lmd * r)
+                    * (r <= 1)
                 )
             else:
-                # see {eq:eigenfun_const}
-                c = c / np.sqrt(2)
                 # see {eq:eigenfun} and {eq:eigenfun_extend}
                 psi[i] = (
                     lambda r, t, c=c, n=n, lmd=lmd: c
-                                                    * spl.jv(n, lmd * r)
-                                                    * np.exp(1j * n * t)
-                                                    * (r <= 1)
-                                                    * (-1) ** np.abs(n)
+                    * spl.jv(n, lmd * r)
+                    * np.exp(1j * n * t)
+                    * (r <= 1)
+                    * (-1) ** np.abs(n)
                 )
             cs[i] = c
 
@@ -1019,7 +1057,7 @@ class FLEBasis2D:
         for i in range(len(a)):
             if self.lmds[k] / (np.pi) > (bandlimit - 1) // 2:
                 k = k - 1
-        a[k + 1:] = 0
+        a[k + 1 :] = 0
         return a
 
     #############################################################################
@@ -1119,5 +1157,3 @@ class FLEBasis2D:
             I[j] = True
 
         return ws
-
-
