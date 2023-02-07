@@ -1,0 +1,73 @@
+Metadata-Version: 2.1
+Name: fle-2d
+Version: 0.0.4
+Summary: Fast expansion into harmonics on the disk
+Author: Nicholas F. Marshall
+License:    MIT License
+           
+           Copyright (c) 2022 Nicholas F. Marshall
+           
+           Permission is hereby granted, free of charge, to any person obtaining a copy
+           of this software and associated documentation files (the "Software"), to deal
+           in the Software without restriction, including without limitation the rights
+           to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+           copies of the Software, and to permit persons to whom the Software is
+           furnished to do so, subject to the following conditions:
+           
+           The above copyright notice and this permission notice shall be included in all
+           copies or substantial portions of the Software.
+           
+           THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+           IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+           FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+           AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+           LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+           OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+           SOFTWARE.
+        
+Project-URL: Homepage, https://arxiv.org/abs/2207.13674
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# fle_2d
+
+Installing using pip
+
+```bash
+# install dependencies
+pip install numpy scipy finufft joblib
+
+# install package
+pip install fle-2d
+
+# download tests folder (optional)
+svn checkout https://github.com/nmarshallf/fle_2d/trunk/tests
+cd tests
+# (alternatively) if svn is not installed, you can:
+# download the project as a zip file, unzip, and navigate to the tests folder.
+
+# run test code (optional)
+python3 test_fle_2d.py
+```
+
+
+If you find the code useful, please cite the corresponding paper:
+
+Nicholas F. Marshall, Oscar Mickelin, Amit Singer. Fast expansion into harmonics on the disk: a steerable basis with fast radial convolutions. arXiv (2022). 
+https://arxiv.org/abs/2207.13674
+
+```text
+@article{marshall2022fast,
+  title={Fast expansion into harmonics on the disk: a steerable basis with fast radial convolutions},
+  author={Marshall, Nicholas F and Mickelin, Oscar and Singer, Amit},
+  journal={arXiv preprint arXiv:2207.13674},
+  year={2022}
+}
+```
+
+# Acknowledgements
+We thank Yunpeng Shi for contributing a vectorized version of the code for tensor inputs consisting of multiples images.
