@@ -22,15 +22,18 @@ python3 test_fle_2d.py
 
 If you find the code useful, please cite the corresponding paper:
 
-Nicholas F. Marshall, Oscar Mickelin, Amit Singer. Fast expansion into harmonics on the disk: a steerable basis with fast radial convolutions. arXiv (2022). 
-https://arxiv.org/abs/2207.13674
+Nicholas F. Marshall, Oscar Mickelin, and Amit Singer. Fast expansion into harmonics on the disk: A steerable basis with fast radial convolutions. SIAM Journal on Scientific Computing, 45(5):A2431–A2457, 2023.
 
 ```text
-@article{marshall2022fast,
-  title={Fast expansion into harmonics on the disk: a steerable basis with fast radial convolutions},
-  author={Marshall, Nicholas F and Mickelin, Oscar and Singer, Amit},
-  journal={arXiv preprint arXiv:2207.13674},
-  year={2022}
+@article{marshall2023fast,
+  author = {Marshall, Nicholas F. and Mickelin, Oscar and Singer, Amit},
+  title = {Fast Expansion into Harmonics on the Disk: A Steerable Basis with Fast Radial Convolutions},
+  journal = {SIAM Journal on Scientific Computing},
+  volume = {45},
+  number = {5},
+  pages = {A2431-A2457},
+  year = {2023},
+  doi = {10.1137/22M1542775},
 }
 ```
 
