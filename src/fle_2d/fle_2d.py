@@ -213,12 +213,11 @@ class FLEBasis2D:
         ):  # we used s somewhere else, so using svar here
             tmp = (
                 L ** 2 * ((lmd1 + ndmax) / svar) ** svar
-            )  # ndmax = n_m from the writeup, right?
+            )  
             if tmp <= eps:
                 n_angular = int(max(int(svar), np.log2(1 / eps)))
                 break
 
-        # print(n_angular)
         if n_angular % 2 == 1:
             n_angular += 1
 
@@ -323,12 +322,16 @@ class FLEBasis2D:
         self.grid_x = x
         self.grid_y = y
         nufft_type = 2
-        self.plan2 = finufft.Plan(nufft_type, (L, L), n_trans=1, eps=eps)
-        self.plan2.setpts(x, y)
+        self.plan2 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = -1, eps=eps)
+        # self.plan2.setpts(x, y)
+        #FINUFFT has opposite meshgrid ordering
+        self.plan2.setpts(y, x)
 
         nufft_type = 1
-        self.plan1 = finufft.Plan(nufft_type, (L, L), n_trans=1, eps=eps)
-        self.plan1.setpts(x, y)
+        self.plan1 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = 1, eps=eps)
+        # self.plan1.setpts(x, y)
+        #FINUFFT has opposite meshgrid ordering
+        self.plan1.setpts(y, x)
 
         return
 
@@ -608,8 +611,10 @@ class FLEBasis2D:
                 (nf, self.n_radial, self.n_angular), dtype=np.complex128
             )
             nufft_type = 2
-            plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, eps=self.eps)
-            plan2v.setpts(self.grid_x, self.grid_y)
+            plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps)
+
+            #NUFFT has opposite meshgrid ordering
+            plan2v.setpts(self.grid_y, self.grid_x)
 
             z0 = plan2v.execute(f) * self.h ** 2
             z0 = z0.reshape(nf, self.n_radial, self.n_angular // 2)
@@ -640,9 +645,12 @@ class FLEBasis2D:
             z = z[:, :, : self.n_angular // 2]
             nufft_type = 1
             plan1v = finufft.Plan(
-                nufft_type, (self.L, self.L), n_trans=nz, eps=self.eps
+                nufft_type, (self.L, self.L), n_trans=nz, isign=1, eps=self.eps
             )
-            plan1v.setpts(self.grid_x, self.grid_y)
+
+            #NUFFT has opposite meshgrid ordering
+            plan1v.setpts(self.grid_y, self.grid_x)
+
             f = plan1v.execute(z.reshape(nz, -1))
             f = f + np.conj(f)
             f = np.real(f)
@@ -658,7 +666,9 @@ class FLEBasis2D:
             z = z.reshape(self.n_radial, self.n_angular)
             b = np.fft.fft(z, n=self.n_angular, axis=1) / self.n_angular
             b = b[:, self.nus]
-            b = np.conj(b).T
+            b = b.T
+            for nn in range(b.shape[0]):
+                b[nn,:] *= (1j)**(self.nus[nn])
             b = self.c2r_nus @ b
             b = np.real(b).T
 
@@ -669,10 +679,11 @@ class FLEBasis2D:
             z = z.reshape(nz, self.n_radial, self.n_angular)
             b = np.fft.fft(z, n=self.n_angular, axis=2) / self.n_angular
             b = b[:, :, self.nus]
-            b = np.conj(b)
 
             b = np.swapaxes(b, 0, 2)
             b = b.reshape(-1, self.n_radial * nz)
+            for nn in range(b.shape[0]):
+                b[nn,:] *= (1j)**(self.nus[nn])
             b = self.c2r_nus @ b
             b = b.reshape(-1, self.n_radial, nz)
             b = np.real(np.swapaxes(b, 0, 2))
@@ -788,7 +799,7 @@ class FLEBasis2D:
 
             tmp = np.zeros((b.shape[0], self.n_angular), dtype=np.complex128)
             tmp0 = (self.r2c_nus @ b.T).T
-            tmp[:, self.nus] = np.conj(tmp0)
+            tmp[:, self.nus] = ((-1j)**self.nus)*tmp0
             z = np.fft.ifft(tmp, axis=1)
 
         else:
@@ -804,7 +815,7 @@ class FLEBasis2D:
             b = b.reshape(-1, self.n_radial, nb)
             b = np.swapaxes(b, 0, 2)
 
-            tmp[:, :, self.nus] = np.conj(b)
+            tmp[:, :, self.nus] = ((-1j)**self.nus)*b
             z = np.fft.ifft(tmp, axis=2)
 
         return z
@@ -822,6 +833,8 @@ class FLEBasis2D:
         ys = ys / R
         rs = np.sqrt(xs ** 2 + ys ** 2)
         ts = np.arctan2(ys, xs)
+
+
 
         # Compute in parallel if numthread > 1
         if numthread <= 1:
@@ -848,7 +861,9 @@ class FLEBasis2D:
             B = B[:self.L1,:self.L1,:]
 
         B = B.reshape(self.L1 ** 2, self.ne)
-        B = self.transform_complex_to_real(np.conj(B), self.ns)
+
+        if not self.complexmode:
+            B = self.transform_complex_to_real(np.conj(B), self.ns)
 
 
         return B.reshape(self.L1 ** 2, self.ne)
@@ -956,7 +971,6 @@ class FLEBasis2D:
                     * spl.jv(n, lmd * r)
                     * np.exp(1j * n * t)
                     * (r <= 1)
-                    * (-1) ** np.abs(n)
                 )
             cs[i] = c
 

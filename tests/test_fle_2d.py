@@ -13,6 +13,7 @@ def main():
     # test 1: Verify that code agrees with dense matrix mulitplication
     print("test 1")
     test1_fle_vs_dense()
+    test1_complex_fle_vs_dense()
 
     # test 2: verify that code can lowpass
     print("test 2")
@@ -33,7 +34,7 @@ def main():
     # test6: check that it works for tensor inputs
     print("test 6")
     test6_check_tensor_input_works()
-
+    test6_complex_check_tensor_input_works()
     # test7: expand error
     print("test 7")
     test7_expand_error_test()
@@ -41,6 +42,7 @@ def main():
     # test8: verify that the code works for images with odd dimensions
     print("test 8")
     test8_fle_vs_dense_odd()
+    test8_complex_fle_vs_dense_odd()
 
     plt.show()
     return
@@ -101,7 +103,7 @@ def test1_fle_vs_dense_helper(L, eps):
     x = data["x"]
     x = x / np.max(np.abs(x.flatten()))
     x = x.reshape((L**2, 1))
-
+    # x = B[:,2]
     # evaluate_t
     a_dense = B.T @ x
     a_fle = fle.evaluate_t(x)
@@ -115,8 +117,93 @@ def test1_fle_vs_dense_helper(L, eps):
     erra = relerr(a_dense, a_fle)
     errx = relerr(xlow_dense, xlow_fle)
 
+    # plt.plot(np.real(a_dense))
+    # plt.plot(np.real(a_fle))
+
+    # plt.figure()
+    # plt.plot(np.real(a_dense))
+    # plt.plot(np.real(a_fle))
+
+    # plt.figure()
+    # plt.plot(np.real(a_fle-a_dense))
+
+    # plt.plot(np.abs(a_dense))
+    # plt.plot(np.abs(a_fle))
+    # plt.show()
+
     return erra, errx
 
+def test1_complex_fle_vs_dense():
+
+    Ls = 32 + 32*np.arange(2)
+    ls = []
+    epss = []
+    for eps in (1e-4, 1e-7, 1e-10, 1e-14):
+        for l in Ls:
+            ls.append(l)
+            epss.append(eps)
+    n = len(ls)
+    erra = np.zeros(n)
+    errx = np.zeros(n)
+    for i in range(n):
+        erra[i], errx[i] = test1_complex_fle_vs_dense_helper(ls[i], epss[i])
+
+    # make {tab:accuracy}
+    print()
+    print(r"\begin{tabular}{r|ccc}")
+    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print(r"\hline")
+    for i in range(n):
+        print(
+            ls[i],
+            "&",
+            "{:12.5e}".format(epss[i]),
+            "&",
+            "{:12.5e}".format(erra[i]),
+            "&",
+            "{:12.5e}".format(errx[i]),
+            "\\\\",
+        )
+        if i % len(Ls) == len(Ls) - 1:
+            print(r"\hline")
+    print(r"\end{tabular}")
+    print("")
+
+
+def test1_complex_fle_vs_dense_helper(L, eps):
+
+    # Parameters
+    # Bandlimit scaled so that L is maximum suggested bandlimit
+
+    # Basis pre-computation
+    bandlimit = L
+    fle = FLEBasis2D(L, bandlimit, eps, mode="complex")
+    t1 = time.time()
+
+    # Create 
+    B = fle.create_denseB(numthread=10)
+
+    # load example image
+    datafile = "test_images/data_L=" + str(L) + ".mat"
+    data = loadmat(datafile)
+    x = data["x"]
+    x = x / np.max(np.abs(x.flatten()))
+    x = x.reshape((L**2, 1))
+
+    # evaluate_t
+    a_dense = np.conj(B.T) @ x
+    a_fle = fle.evaluate_t(x)
+
+    # evaluate
+    xlow_dense = B @ a_dense
+    xlow_fle = fle.evaluate(a_dense)
+
+    # printt
+
+    erra = relerr(a_dense, a_fle)
+    errx = relerr(xlow_dense, xlow_fle)
+
+    return erra, errx
 
 def test2_fle_lowpass():
 
@@ -394,15 +481,60 @@ def test6_check_tensor_input_works():
         a_check[i, :] = fle.evaluate_t(X[i, :, :])
         X_check[i, :, :] = fle.evaluate(a_check[i, :])
 
-    # Test the tesnro input
+    # Test the tensor input
     a = fle.evaluate_t(X)
     X = fle.evaluate(a)
 
-    # Prin error
+    # Print error
     err = relerr(a, a_check)
     print("FLEBasis2D coefficient tensor error", err)
     err = relerr(X, X_check)
     print("FLEBasis2D image tensor error", err)
+
+    return
+
+def test6_complex_check_tensor_input_works():
+
+    # Use L x L images
+    L = 128
+    bandlimit = L
+    eps = 1e-7
+    N = 3
+
+    # Basis pre-computation
+    fle = FLEBasis2D(L, bandlimit, eps, mode="complex")
+
+    # load example image
+    datafile = "test_images/data_L=" + str(L) + ".mat"
+    data = loadmat(datafile)
+    x = data["x"]
+    x = x / np.max(np.abs(x.flatten()))
+    x = x.reshape((L**2, 1))
+
+    a = fle.evaluate_t(x)
+    xlow = fle.evaluate(a)
+
+    # Create a three dimensional array with rotated images
+    X = np.zeros((N, L, L), dtype=np.float64, order="C")
+    X_check = np.zeros((N, L, L), dtype=np.float64, order="C")
+    a_check = np.zeros((N, fle.ne),dtype=np.complex128)
+    for i in range(N):
+        theta = 2 * np.pi * i / N
+        b_rot = fle.rotate_multipliers(theta)
+        a_rot = fle.c2r @ (b_rot * (fle.r2c @ a))
+        X[i, :, :] = fle.evaluate(a_rot)
+        a_check[i, :] = fle.evaluate_t(X[i, :, :])
+        X_check[i, :, :] = fle.evaluate(a_check[i, :])
+
+    # Test the tensor input
+    a = fle.evaluate_t(X)
+    X = fle.evaluate(a)
+
+    # Print error
+    err = relerr(a, a_check)
+    print("FLEBasis2D complex coefficient tensor error", err)
+    err = relerr(X, X_check)
+    print("FLEBasis2D complex image tensor error", err)
 
     return
 
@@ -548,7 +680,77 @@ def test8_fle_vs_dense_odd_helper(L, eps):
 
     return erra, errx
 
+def test8_complex_fle_vs_dense_odd():
 
+    Ls = (33,65)
+    ls = []
+    epss = []
+    for eps in (1e-4, 1e-7, 1e-10, 1e-14):
+        for l in Ls:
+            ls.append(l)
+            epss.append(eps)
+    n = len(ls)
+    erra = np.zeros(n)
+    errx = np.zeros(n)
+    for i in range(n):
+        erra[i], errx[i] = test8_complex_fle_vs_dense_odd_helper(ls[i], epss[i])
+
+    # make {tab:accuracy}
+    print()
+    print(r"\begin{tabular}{r|ccc}")
+    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print(r"\hline")
+    for i in range(n):
+        print(
+            ls[i],
+            "&",
+            "{:12.5e}".format(epss[i]),
+            "&",
+            "{:12.5e}".format(erra[i]),
+            "&",
+            "{:12.5e}".format(errx[i]),
+            "\\\\",
+        )
+        if i % len(Ls) == len(Ls) - 1:
+            print(r"\hline")
+    print(r"\end{tabular}")
+    print("")
+
+
+def test8_complex_fle_vs_dense_odd_helper(L, eps):
+
+    # Parameters
+    # Bandlimit scaled so that L is maximum suggested bandlimit
+
+    # Basis pre-computation
+    bandlimit = L
+    fle = FLEBasis2D(L, bandlimit, eps, mode="complex")
+    t1 = time.time()
+
+    # Create 
+    B = fle.create_denseB(numthread=10)
+
+    # load example image
+    datafile = "test_images/data_L=" + str(L) + ".mat"
+    data = loadmat(datafile)
+    x = data["x"]
+    x = x / np.max(np.abs(x.flatten()))
+    x = x.reshape((L**2, 1))
+
+    # evaluate_t
+    a_dense = np.conj(B.T) @ x
+    a_fle = fle.evaluate_t(x)
+
+    # evaluate
+    xlow_dense = B @ a_dense
+    xlow_fle = fle.evaluate(a_dense)
+
+    # printt
+
+    erra = relerr(a_dense, a_fle)
+    errx = relerr(xlow_dense, xlow_fle)
+
+    return erra, errx
 
 
 
