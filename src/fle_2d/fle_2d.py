@@ -410,11 +410,11 @@ class FLEBasis2D:
             gamma
         ) - alpha_list * np.cos(gamma)
 
-        rwts_mat = self.expand_raidal_vec(ctf_radial.T)
+        rwts_mat = self.expand_radial_vec(ctf_radial.T)
 
         return rwts_mat
 
-    def expand_raidal_vec(self, radial_vec):
+    def expand_radial_vec(self, radial_vec):
 
         radial_vec = radial_vec.T
         if self.n_interp > self.n_radial:
@@ -475,40 +475,26 @@ class FLEBasis2D:
         # DIMENSINOS AFTER PADDING
         L = self.L
 
-        if np.prod(f.shape) == self.L1 ** 2:
+        if np.prod(f.shape) == self.L1**2:
+            f = np.copy(f).reshape(1, self.L1, self.L1)
 
-            f = np.copy(f).reshape(self.L1, self.L1)
+        nf = f.shape[0]
+        f = np.copy(f).reshape(nf, self.L1, self.L1)
 
-            # ADD PADDING IF DIMENSIONS ODD
-            if L > L1:
-                f = np.pad(f,((0,1),(0,1)))
+        # ADD PADDING IF DIMENESIONS ODD
+        if L > L1:
+            f = np.pad(f,((0,0),(0,1),(0,1)))
 
-            # For small images just use matrix multiplication
-            if L < 16:
-                return (self.B.T @ f.flatten()).flatten()
+        # For small images just use matrix multiplication
+        if L < 16:
+            return (self.B.T @ f.reshape(nf, L ** 2).T).T
 
-            # Remove pixels outside disk
-            f[self.idx] = 0
-            f = f.flatten()
+        # Remove pixels outside disk
 
-        else:
-            nf = f.shape[0]
-            f = np.copy(f).reshape(nf, self.L1, self.L1)
-
-            # ADD PADDING IF DIMENESIONS ODD
-            if L > L1:
-                f = np.pad(f,((0,0),(0,1),(0,1)))
-
-            # For small images just use matrix multiplication
-            if L < 16:
-                return (self.B.T @ f.reshape(nf, L ** 2).T).T
-
-            # Remove pixels outside disk
-
-            # For small images just use matrix multiplication
-            # Remove pixels outside disk
-            f[:, self.idx] = 0
-            f = f.reshape(nf, L ** 2)
+        # For small images just use matrix multiplication
+        # Remove pixels outside disk
+        f[:, self.idx] = 0
+        f = f.reshape(nf, L ** 2)
 
         # Step 1. {sec:fast_details}
         z = self.step1(f)
@@ -520,14 +506,11 @@ class FLEBasis2D:
         a = self.step3(b)
 
         if self.complexmode:
+            # see {eq:eigenfun} and {eq:eigenfun_extend}
+            a = (self.r2c @ a.T).T
 
-                # see {eq:eigenfun} and {eq:eigenfun_extend}
-            if np.prod(f.shape) == self.L ** 2:
-                a = self.r2c @ a.flatten()
-                a = a.reshape(self.ne)
-
-            else:
-                a = (self.r2c @ a.T).T
+        if np.prod(f.shape) == self.L1**2:
+            a = np.squeeze(a)
 
         return a
 
@@ -535,26 +518,17 @@ class FLEBasis2D:
         # see {rmk:how_to_apply_B} and {sec:fast_details}
 
         L = self.L
-
         if np.prod(a.shape) == self.ne:
+            a = np.copy(a).reshape(1, self.ne)
 
-            if self.complexmode:
-                a = np.real(self.c2r @ a.flatten())
-                a = a.reshape(self.ne)
 
-            a = np.real(a)
-            # for small images use matrix multiplication
-            if self.L < 16:
-                return (self.B @ a).reshape(self.L, self.L)
+        na = a.shape[0]
+        if self.complexmode:
+            a = (self.c2r @ a.T).T
 
-        else:
-            na = a.shape[0]
-            if self.complexmode:
-                a = (self.c2r @ a.T).T
-
-            a = np.real(a)
-            if self.L < 16:
-                return (self.B @ a.T).reshape(na, self.L, self.L)
+        a = np.real(a)
+        if self.L < 16:
+            return (self.B @ a.T).reshape(na, self.L, self.L)
 
         # B1
         b = self.step3_H(a)
@@ -565,19 +539,15 @@ class FLEBasis2D:
         # B3
         f = self.step1_H(z)
 
+        na = a.shape[0]
+        f = f.reshape(na, L, L)
+
+        # REMOVE PADDING
+        if self.L > self.L1:
+            f = f[:,:self.L1,:self.L1]
+
         if np.prod(a.shape) == self.ne:
-            f = f.reshape(L, L)
-
-            # REMOVE PADDING
-            if self.L > self.L1:
-                f = f[:self.L1,:self.L1]
-        else:
-            na = a.shape[0]
-            f = f.reshape(na, L, L)
-
-            # REMOVE PADDING
-            if self.L > self.L1:
-                f = f[:,:self.L1,:self.L1]
+            f = np.squeeze(f)
 
         return f
 
@@ -591,232 +561,134 @@ class FLEBasis2D:
 
     def step1(self, f):
 
-        if np.prod(f.shape) == self.L ** 2:
-            f = f.reshape(self.L, self.L)
-            f = np.array(f, dtype=np.complex128)
-            z = np.zeros((self.n_radial, self.n_angular), dtype=np.complex128)
-            z0 = self.plan2.execute(f) * self.h ** 2
-            z0 = z0.reshape(self.n_radial, self.n_angular // 2)
-            z[:, : self.n_angular // 2] = z0
-            z[:, self.n_angular // 2 :] = np.conj(z0)
-            z = z.flatten()
-        else:
+        L = self.L
+        nf = f.shape[0]
+        f = f.reshape(nf, L, L)
+        f = np.array(f, dtype=np.complex128)
 
-            L = self.L
-            nf = f.shape[0]
-            f = f.reshape(nf, L, L)
-            f = np.array(f, dtype=np.complex128)
+        z = np.zeros(
+            (nf, self.n_radial, self.n_angular), dtype=np.complex128
+        )
+        nufft_type = 2
+        plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps)
 
-            z = np.zeros(
-                (nf, self.n_radial, self.n_angular), dtype=np.complex128
-            )
-            nufft_type = 2
-            plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps)
+        #NUFFT has opposite meshgrid ordering
+        plan2v.setpts(self.grid_y, self.grid_x)
 
-            #NUFFT has opposite meshgrid ordering
-            plan2v.setpts(self.grid_y, self.grid_x)
+        z0 = plan2v.execute(f) * self.h ** 2
+        z0 = z0.reshape(nf, self.n_radial, self.n_angular // 2)
 
-            z0 = plan2v.execute(f) * self.h ** 2
-            z0 = z0.reshape(nf, self.n_radial, self.n_angular // 2)
-
-            z[:, :, : self.n_angular // 2] = z0
-            z[:, :, self.n_angular // 2 :] = np.conj(z0)
-            z = z.reshape(nf, self.n_angular * self.n_radial)
+        z[:, :, : self.n_angular // 2] = z0
+        z[:, :, self.n_angular // 2 :] = np.conj(z0)
+        z = z.reshape(nf, self.n_angular * self.n_radial)
 
         return z
 
     def step1_H(self, z):
 
-        if np.prod(z.shape) == self.n_radial * self.n_angular:
+        nz = z.shape[0]
+        z = z[:, :, : self.n_angular // 2]
+        nufft_type = 1
+        plan1v = finufft.Plan(
+            nufft_type, (self.L, self.L), n_trans=nz, isign=1, eps=self.eps
+        )
 
-            # Half z
-            z = z[:, : self.n_angular // 2]
-            f = self.plan1.execute(z.flatten())
-            f = f + np.conj(f)
-            f = np.real(f)
-            f = f.reshape(self.L, self.L)
-            f[self.idx] = 0
+        #NUFFT has opposite meshgrid ordering
+        plan1v.setpts(self.grid_y, self.grid_x)
 
-            f = f.flatten()
-
-        else:
-
-            nz = z.shape[0]
-            z = z[:, :, : self.n_angular // 2]
-            nufft_type = 1
-            plan1v = finufft.Plan(
-                nufft_type, (self.L, self.L), n_trans=nz, isign=1, eps=self.eps
-            )
-
-            #NUFFT has opposite meshgrid ordering
-            plan1v.setpts(self.grid_y, self.grid_x)
-
-            f = plan1v.execute(z.reshape(nz, -1))
-            f = f + np.conj(f)
-            f = np.real(f)
-            f = f.reshape(nz, self.L, self.L)
-            f[:, self.idx] = 0
+        f = plan1v.execute(z.reshape(nz, -1))
+        f = f + np.conj(f)
+        f = np.real(f)
+        f = f.reshape(nz, self.L, self.L)
+        f[:, self.idx] = 0
 
         return f
 
     def step2(self, z):
 
-        if np.prod(z.shape) == self.n_radial * self.n_angular:
-            # Compute Fourier coefficients along rings
-            z = z.reshape(self.n_radial, self.n_angular)
-            b = np.fft.fft(z, n=self.n_angular, axis=1) / self.n_angular
-            b = b[:, self.nus]
-            b = b.T
-            for nn in range(b.shape[0]):
-                b[nn,:] *= (1j)**(self.nus[nn])
-            b = self.c2r_nus @ b
-            b = np.real(b).T
+        nz = z.shape[0]
+        z = z.reshape(nz, self.n_radial, self.n_angular)
+        b = np.fft.fft(z, n=self.n_angular, axis=2) / self.n_angular
+        b = b[:, :, self.nus]
 
-        else:
-
-            nz = z.shape[0]
-            ind_vec = self.ind_vec
-            z = z.reshape(nz, self.n_radial, self.n_angular)
-            b = np.fft.fft(z, n=self.n_angular, axis=2) / self.n_angular
-            b = b[:, :, self.nus]
-
-            b = np.swapaxes(b, 0, 2)
-            b = b.reshape(-1, self.n_radial * nz)
-            for nn in range(b.shape[0]):
-                b[nn,:] *= (1j)**(self.nus[nn])
-            b = self.c2r_nus @ b
-            b = b.reshape(-1, self.n_radial, nz)
-            b = np.real(np.swapaxes(b, 0, 2))
+        b = np.swapaxes(b, 0, 2)
+        b = b.reshape(-1, self.n_radial * nz)
+        for nn in range(b.shape[0]):
+            b[nn,:] *= (1j)**(self.nus[nn])
+        b = self.c2r_nus @ b
+        b = b.reshape(-1, self.n_radial, nz)
+        b = np.real(np.swapaxes(b, 0, 2))
 
         return b
 
     def step3(self, b):
 
-        if len(b.shape) == 2:
+        nb = b.shape[0]
 
-            b = np.array(b, order="F")
-            if self.n_interp > self.n_radial:
-                b = dct(b, axis=0, type=2) / (2 * self.n_radial)
-                bz = np.zeros(b.shape)
-                b = np.concatenate((b, bz), axis=0)
-                b = idct(b, axis=0, type=2) * 2 * b.shape[0]
+        if self.n_interp > self.n_radial:
+            b = dct(b, axis=1, type=2) / (2 * self.n_radial)
+            bz = np.zeros(b.shape)
+            b = np.concatenate((b, bz), axis=1)
+            b = idct(b, axis=1, type=2) * 2 * b.shape[1]
 
-            h = self.h
+        h = self.h
 
-            a = np.zeros(self.ne, dtype=np.float64)
-            y = [None] * (self.ndmax + 1)
+        b = np.moveaxis(b, 0, -1)
 
-            for i in range(self.ndmax + 1):
-                y[i] = (self.A3[i] @ b[:, i]).flatten()
+        a = np.zeros((self.ne, nb), dtype=np.float64)
+        for i in range(self.ndmax + 1):
+            a[self.idx_list[i]] = self.A3[i] @ b[:, i, :]
 
-            for i in range(self.ndmax + 1):
-                a[self.idx_list[i]] = y[i]
+        a = a.T
 
-            a = a * self.cs / h
-            a = a.flatten()
-
-        else:
-
-            nb = b.shape[0]
-
-            if self.n_interp > self.n_radial:
-                b = dct(b, axis=1, type=2) / (2 * self.n_radial)
-                bz = np.zeros(b.shape)
-                b = np.concatenate((b, bz), axis=1)
-                b = idct(b, axis=1, type=2) * 2 * b.shape[1]
-
-            h = self.h
-
-            b = np.moveaxis(b, 0, -1)
-
-            a = np.zeros((self.ne, nb), dtype=np.float64)
-            for i in range(self.ndmax + 1):
-                a[self.idx_list[i]] = self.A3[i] @ b[:, i, :]
-
-            a = a.T
-
-            a = a * self.cs / h
+        a = a * self.cs / h
 
         return a
 
     def step3_H(self, a):
 
-        if np.prod(a.shape) == self.ne:
+        na = a.shape[0]
 
-            h = self.h
+        a = a.reshape(na, self.ne)
+        # for small images use matrix multiplication
 
-            a = a * h
-            a = a.flatten()
-            a = a * self.cs
+        h = self.h
 
-            y = [None] * (self.ndmax + 1)
-            for i in range(self.ndmax + 1):
-                y[i] = a[self.idx_list[i]]
+        a = a * h * self.cs
 
-            b = np.zeros(
-                (self.n_interp, 2 * self.nmax + 1), dtype=np.float64, order="F"
-            )
-            for i in range(self.ndmax + 1):
-                b[:, i] = self.A3_T[i] @ y[i]
+        a = a.T
+        b = np.zeros(
+            (self.n_interp, 2 * self.nmax + 1, na),
+            dtype=np.float64,
+            order="F",
+        )
+        for i in range(self.ndmax + 1):
+            b[:, i, :] = self.A3_T[i] @ a[self.idx_list[i]]
 
-            if self.n_interp > self.n_radial:
-                b = dct(b, axis=0, type=2)
-                b = b[: self.n_radial, :]
-                b = idct(b, axis=0, type=2)
+        b = np.moveaxis(b, -1, 0)
 
-        else:
-
-            na = a.shape[0]
-
-            a = a.reshape(na, self.ne)
-            # for small images use matrix multiplication
-
-            h = self.h
-
-            a = a * h * self.cs
-
-            a = a.T
-            b = np.zeros(
-                (self.n_interp, 2 * self.nmax + 1, na),
-                dtype=np.float64,
-                order="F",
-            )
-            for i in range(self.ndmax + 1):
-                b[:, i, :] = self.A3_T[i] @ a[self.idx_list[i]]
-
-            b = np.moveaxis(b, -1, 0)
-
-            if self.n_interp > self.n_radial:
-                b = dct(b, axis=1, type=2)
-                b = b[:, : self.n_radial, :]
-                b = idct(b, axis=1, type=2)
+        if self.n_interp > self.n_radial:
+            b = dct(b, axis=1, type=2)
+            b = b[:, : self.n_radial, :]
+            b = idct(b, axis=1, type=2)
 
         return b
 
     def step2_H(self, b):
 
-        if len(b.shape) == 2:
+        nb = b.shape[0]
+        tmp = np.zeros(
+            (b.shape[0], b.shape[1], self.n_angular), dtype=np.complex128
+        )
 
-            tmp = np.zeros((b.shape[0], self.n_angular), dtype=np.complex128)
-            tmp0 = (self.r2c_nus @ b.T).T
-            tmp[:, self.nus] = ((-1j)**self.nus)*tmp0
-            z = np.fft.ifft(tmp, axis=1)
+        b = np.swapaxes(b, 0, 2)
+        b = b.reshape(-1, self.n_radial * nb)
+        b = self.r2c_nus @ b
+        b = b.reshape(-1, self.n_radial, nb)
+        b = np.swapaxes(b, 0, 2)
 
-        else:
-
-            nb = b.shape[0]
-            tmp = np.zeros(
-                (b.shape[0], b.shape[1], self.n_angular), dtype=np.complex128
-            )
-
-            b = np.swapaxes(b, 0, 2)
-            b = b.reshape(-1, self.n_radial * nb)
-            b = self.r2c_nus @ b
-            b = b.reshape(-1, self.n_radial, nb)
-            b = np.swapaxes(b, 0, 2)
-
-            tmp[:, :, self.nus] = ((-1j)**self.nus)*b
-            z = np.fft.ifft(tmp, axis=2)
+        tmp[:, :, self.nus] = ((-1j)**self.nus)*b
+        z = np.fft.ifft(tmp, axis=2)
 
         return z
 
