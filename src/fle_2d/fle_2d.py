@@ -338,26 +338,24 @@ class FLEBasis2D:
     def radialconv_wts(self, b):
 
         ne = self.ne
+        nb = b.shape[0]
 
         b = np.array(b, order="F")
         if self.n_interp > self.n_radial:
-            b = dct(b, axis=0, type=2) / (2 * self.n_radial)
+            b = dct(b, axis=1, type=2) / (2 * self.n_radial)
             bz = np.zeros(b.shape)
-            b = np.concatenate((b, bz), axis=0)
-            b = idct(b, axis=0, type=2) * 2 * b.shape[0]
+            b = np.concatenate((b, bz), axis=1)
+            b = idct(b, axis=1, type=2) * 2 * b.shape[1]
 
         h = self.h
-
-        a = np.zeros(ne, dtype=np.float64)
-
-        y = [None] * (self.ndmax + 1)
+        b = np.moveaxis(b, 0, -1)
+        a = np.zeros((self.ne, nb), dtype=np.float64)
         for i in range(self.ndmax + 1):
-            y[i] = (self.A3[i] @ b[:, 0]).flatten()
+            a[self.idx_list[i]] = self.A3[i] @ b[:, 0, :]
 
-        for i in range(self.ndmax + 1):
-            a[self.idx_list[i]] = y[i]
+        a = a.T
 
-        return a.flatten()
+        return a
 
     def radialconv(self, a, f):
 
@@ -447,11 +445,10 @@ class FLEBasis2D:
 
         # Copy and reshape f
         L = self.L
-        f = np.copy(f).reshape(L, L)
+        f = np.copy(f).reshape(-1,L, L)
 
         # Remove pixels outside disk
-        f[self.idx] = 0
-        f = f.flatten()
+        f[:,self.idx] = 0
 
         # Step 1.
         z = self.step1(f)
@@ -475,11 +472,7 @@ class FLEBasis2D:
         # DIMENSINOS AFTER PADDING
         L = self.L
 
-        if np.prod(f.shape) == self.L1**2:
-            f = np.copy(f).reshape(1, self.L1, self.L1)
-
-        nf = f.shape[0]
-        f = np.copy(f).reshape(nf, self.L1, self.L1)
+        f = np.copy(f).reshape(-1, self.L1, self.L1)
 
         # ADD PADDING IF DIMENESIONS ODD
         if L > L1:
@@ -487,14 +480,14 @@ class FLEBasis2D:
 
         # For small images just use matrix multiplication
         if L < 16:
-            return (self.B.T @ f.reshape(nf, L ** 2).T).T
+            return (self.B.T @ f.reshape(-1, L ** 2).T).T
 
         # Remove pixels outside disk
 
         # For small images just use matrix multiplication
         # Remove pixels outside disk
         f[:, self.idx] = 0
-        f = f.reshape(nf, L ** 2)
+        f = f.reshape(-1, L ** 2)
 
         # Step 1. {sec:fast_details}
         z = self.step1(f)
@@ -518,11 +511,9 @@ class FLEBasis2D:
         # see {rmk:how_to_apply_B} and {sec:fast_details}
 
         L = self.L
-        if np.prod(a.shape) == self.ne:
-            a = np.copy(a).reshape(1, self.ne)
-
-
+        a = np.copy(a).reshape(-1, self.ne)
         na = a.shape[0]
+
         if self.complexmode:
             a = (self.c2r @ a.T).T
 
@@ -562,8 +553,8 @@ class FLEBasis2D:
     def step1(self, f):
 
         L = self.L
+        f = f.reshape(-1, L, L)
         nf = f.shape[0]
-        f = f.reshape(nf, L, L)
         f = np.array(f, dtype=np.complex128)
 
         z = np.zeros(
