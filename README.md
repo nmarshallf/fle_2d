@@ -3,8 +3,9 @@
 Installing in conda environment
 
 ```bash
-conda create -n fle pip numpy scipy joblib matplotlib finufft
+conda create -n fle 
 conda activate fle
+conda install pip numpy scipy joblib matplotlib finufft
 pip install fle-2d
 ```
 
