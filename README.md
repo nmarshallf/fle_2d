@@ -18,7 +18,8 @@ pip install numpy scipy joblib matplotlib finufft fle-2d
 Testing install
 
 ```bash
-git clone https://github.com/nmarshallf/fle_2d.git # Or download folder and unzip
+git clone https://github.com/nmarshallf/fle_2d.git
+# Or download folder and unzip
 cd fle_2d/tests/
 python3 test_fle_2d.py 
 ```
