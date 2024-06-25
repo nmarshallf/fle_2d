@@ -65,7 +65,7 @@ def test1_fle_vs_dense():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -151,7 +151,7 @@ def test1_complex_fle_vs_dense():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -626,7 +626,7 @@ def test8_fle_vs_dense_odd():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -698,7 +698,7 @@ def test8_complex_fle_vs_dense_odd():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
