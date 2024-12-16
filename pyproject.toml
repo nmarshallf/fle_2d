@@ -1,6 +1,6 @@
 [project]
 name = "fle_2d"
-version = "0.0.8"
+version = "0.0.9"
 authors = [
   { name="Nicholas F. Marshall"},
 ]
