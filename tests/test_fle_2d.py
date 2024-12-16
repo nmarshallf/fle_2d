@@ -44,6 +44,8 @@ def main():
     test8_fle_vs_dense_odd()
     test8_complex_fle_vs_dense_odd()
 
+    # test9: check conventions
+    print("test 9")
     test9(32)
     plt.show()
     return
@@ -66,7 +68,7 @@ def test1_fle_vs_dense():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -138,7 +140,7 @@ def test1_complex_fle_vs_dense():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -615,7 +617,7 @@ def test8_fle_vs_dense_odd():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -687,7 +689,7 @@ def test8_complex_fle_vs_dense_odd():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -745,8 +747,8 @@ def test8_complex_fle_vs_dense_odd_helper(L, eps):
 
 def test9(L):
     eps = 1e-6
-    path_to_module = os.path.dirname(__file__)
-    zeros_path = os.path.join(path_to_module, "jn_zeros_n=3000_nt=2500.mat")
+    script_dir = os.path.dirname(__file__)
+    zeros_path = os.path.join(script_dir, "..", "src", "fle_2d", "jn_zeros_n=3000_nt=2500.mat")
     data = loadmat(zeros_path)
     lmds = data["roots_table"]
     bandlimit = L
