@@ -1,6 +1,6 @@
 [project]
 name = "fle_2d"
-version = "0.0.6"
+version = "0.0.8"
 authors = [
   { name="Nicholas F. Marshall"},
 ]
@@ -13,9 +13,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-
-[project.urls]
-"Homepage" = "https://arxiv.org/abs/2207.13674"
 
 [tool.setuptools]
 include-package-data = true
