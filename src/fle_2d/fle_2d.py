@@ -339,7 +339,6 @@ class FLEBasis2D:
 
         ne = self.ne
         nb = b.shape[0]
-
         b = np.array(b, order="F")
         if self.n_interp > self.n_radial:
             b = dct(b, axis=1, type=2) / (2 * self.n_radial)
@@ -348,14 +347,20 @@ class FLEBasis2D:
             b = idct(b, axis=1, type=2) * 2 * b.shape[1]
 
         h = self.h
+
         b = np.moveaxis(b, 0, -1)
+
         a = np.zeros((self.ne, nb), dtype=np.float64)
+
+
+        y = [None] * (self.ndmax + 1)
         for i in range(self.ndmax + 1):
-            a[self.idx_list[i]] = self.A3[i] @ b[:, 0, :]
+            a[self.idx_list[i]] = (self.A3[i] @ b[:, 0, :])
 
-        a = a.T
+        return a.flatten()
+    
 
-        return a
+
 
     def radialconv(self, a, f):
 
@@ -445,10 +450,11 @@ class FLEBasis2D:
 
         # Copy and reshape f
         L = self.L
-        f = np.copy(f).reshape(-1,L, L)
+        f = np.copy(f).reshape(1, L, L)
 
         # Remove pixels outside disk
         f[:,self.idx] = 0
+        # f = f.flatten()
 
         # Step 1.
         z = self.step1(f)
@@ -472,7 +478,11 @@ class FLEBasis2D:
         # DIMENSINOS AFTER PADDING
         L = self.L
 
-        f = np.copy(f).reshape(-1, self.L1, self.L1)
+        if np.prod(f.shape) == self.L1**2:
+            f = np.copy(f).reshape(1, self.L1, self.L1)
+
+        nf = f.shape[0]
+        f = np.copy(f).reshape(nf, self.L1, self.L1)
 
         # ADD PADDING IF DIMENESIONS ODD
         if L > L1:
@@ -480,14 +490,14 @@ class FLEBasis2D:
 
         # For small images just use matrix multiplication
         if L < 16:
-            return (self.B.T @ f.reshape(-1, L ** 2).T).T
+            return (self.B.T @ f.reshape(nf, L ** 2).T).T
 
         # Remove pixels outside disk
 
         # For small images just use matrix multiplication
         # Remove pixels outside disk
         f[:, self.idx] = 0
-        f = f.reshape(-1, L ** 2)
+        f = f.reshape(nf, L ** 2)
 
         # Step 1. {sec:fast_details}
         z = self.step1(f)
@@ -511,9 +521,11 @@ class FLEBasis2D:
         # see {rmk:how_to_apply_B} and {sec:fast_details}
 
         L = self.L
-        a = np.copy(a).reshape(-1, self.ne)
-        na = a.shape[0]
+        if np.prod(a.shape) == self.ne:
+            a = np.copy(a).reshape(1, self.ne)
 
+
+        na = a.shape[0]
         if self.complexmode:
             a = (self.c2r @ a.T).T
 
@@ -553,8 +565,8 @@ class FLEBasis2D:
     def step1(self, f):
 
         L = self.L
-        f = f.reshape(-1, L, L)
         nf = f.shape[0]
+        f = f.reshape(nf, L, L)
         f = np.array(f, dtype=np.complex128)
 
         z = np.zeros(
@@ -726,7 +738,7 @@ class FLEBasis2D:
         B = B.reshape(self.L1 ** 2, self.ne)
 
         if not self.complexmode:
-            B = self.transform_complex_to_real(np.conj(B), self.ns)
+            B = self.transform_complex_to_real(B, self.ns)
 
 
         return B.reshape(self.L1 ** 2, self.ne)
@@ -741,7 +753,7 @@ class FLEBasis2D:
         nn = 1 + 2 * nc
         ns = np.zeros((nn, nd), dtype=int, order="F")
         ks = np.zeros((nn, nd), dtype=int, order="F")
-        lmds = np.ones((nn, nd), dtype=np.float64) * 1e10 # Large constant such that unchanged entries will be listed last when sorted in ascending order
+        lmds = np.ones((nn, nd), dtype=np.float64) * np.inf
 
         # load table of roots of jn (the scipy code has an issue where it gets
         # stuck in an infinite loop in Newton's method as of Jun 2022)
@@ -858,22 +870,22 @@ class FLEBasis2D:
             if n < 0:
                 s = (-1) ** np.abs(n)
 
-                vals[k] = 1 / np.sqrt(2)
+                vals[k] = s / ( 1j * np.sqrt(2) )
                 idx[k] = i
                 jdx[k] = i
                 k = k + 1
 
-                vals[k] = s / np.sqrt(2)
+                vals[k] = -1 / ( 1j * np.sqrt(2) )
                 idx[k] = i
                 jdx[k] = i + 1
                 k = k + 1
 
-                vals[k] = -1 / (1j * np.sqrt(2))
+                vals[k] = s / np.sqrt(2)
                 idx[k] = i + 1
                 jdx[k] = i
                 k = k + 1
 
-                vals[k] = s / (1j * np.sqrt(2))
+                vals[k] = 1 / np.sqrt(2)
                 idx[k] = i + 1
                 jdx[k] = i + 1
                 k = k + 1
@@ -895,8 +907,8 @@ class FLEBasis2D:
                 X[:, i] = np.real(Z[:, i])
             if n < 0:
                 s = (-1) ** np.abs(n)
-                x0 = (Z[:, i] + s * Z[:, i + 1]) / np.sqrt(2)
-                x1 = (-Z[:, i] + s * Z[:, i + 1]) / (1j * np.sqrt(2))
+                x0 = (-s*Z[:, i] + Z[:, i + 1]) / (1j * np.sqrt(2))
+                x1 = ( s*Z[:, i] +  Z[:, i + 1]) / np.sqrt(2)
                 X[:, i] = np.real(x0)
                 X[:, i + 1] = np.real(x1)
 

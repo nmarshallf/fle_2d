@@ -5,8 +5,8 @@ from scipy.io import savemat
 from fle_2d import FLEBasis2D
 import numpy as np
 from scipy.io import loadmat
-
-
+import os
+import scipy.special as spl
 
 def main():
 
@@ -44,6 +44,7 @@ def main():
     test8_fle_vs_dense_odd()
     test8_complex_fle_vs_dense_odd()
 
+    test9(32)
     plt.show()
     return
 
@@ -65,7 +66,7 @@ def test1_fle_vs_dense():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -103,7 +104,7 @@ def test1_fle_vs_dense_helper(L, eps):
     x = data["x"]
     x = x / np.max(np.abs(x.flatten()))
     x = x.reshape((L**2, 1))
-    # x = B[:,2]
+
     # evaluate_t
     a_dense = B.T @ x
     a_fle = fle.evaluate_t(x)
@@ -113,23 +114,9 @@ def test1_fle_vs_dense_helper(L, eps):
     xlow_fle = fle.evaluate(a_dense)
 
     # printt
-
     erra = relerr(a_dense, a_fle)
     errx = relerr(xlow_dense, xlow_fle)
 
-    # plt.plot(np.real(a_dense))
-    # plt.plot(np.real(a_fle))
-
-    # plt.figure()
-    # plt.plot(np.real(a_dense))
-    # plt.plot(np.real(a_fle))
-
-    # plt.figure()
-    # plt.plot(np.real(a_fle-a_dense))
-
-    # plt.plot(np.abs(a_dense))
-    # plt.plot(np.abs(a_fle))
-    # plt.show()
 
     return erra, errx
 
@@ -151,7 +138,7 @@ def test1_complex_fle_vs_dense():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -296,7 +283,8 @@ def test3_helper(L, fle, x):
     L = fle.L
     f = np.copy(x).reshape(fle.L, fle.L)
     f[fle.idx] = 0
-    f = f.flatten()
+    # f = f.flatten()
+    f = f.reshape(1,fle.L,fle.L)
 
     # Step 1. {sec:fast_details}
     t0 = time.time()
@@ -467,6 +455,7 @@ def test6_check_tensor_input_works():
     x = x.reshape((L**2, 1))
 
     a = fle.evaluate_t(x)
+    print(a.shape)
     xlow = fle.evaluate(a)
 
     # Create a three dimensional array with rotated images
@@ -626,7 +615,7 @@ def test8_fle_vs_dense_odd():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -698,7 +687,7 @@ def test8_complex_fle_vs_dense_odd():
     # make {tab:accuracy}
     print()
     print(r"\begin{tabular}{r|ccc}")
-    print("$l$ & $\\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
+    print("$l$ & $\epsilon$ & $\\text{err}_a$ & $\\text{err}_f$ \\\\")
     print(r"\hline")
     for i in range(n):
         print(
@@ -751,6 +740,45 @@ def test8_complex_fle_vs_dense_odd_helper(L, eps):
     errx = relerr(xlow_dense, xlow_fle)
 
     return erra, errx
+
+
+
+def test9(L):
+    eps = 1e-6
+    path_to_module = os.path.dirname(__file__)
+    zeros_path = os.path.join(path_to_module, "jn_zeros_n=3000_nt=2500.mat")
+    data = loadmat(zeros_path)
+    lmds = data["roots_table"]
+    bandlimit = L
+    fle = FLEBasis2D(L, bandlimit, eps, mode="real")
+    B = fle.create_denseB()
+    for ind in range(20):
+        v = np.zeros((fle.ne,1), dtype = np.complex128)
+        v[ind] = 1
+        psi0 = fle.evaluate(v)
+        psi = B[:,ind].reshape(L,L)
+
+        x = np.linspace(-1,1,L,endpoint=False)
+
+
+        psi2 = np.zeros(psi.shape, dtype = np.complex128)
+        n = fle.ns[ind]
+        k = fle.ks[ind]
+
+
+        xs, ys = np.meshgrid(x, x)
+        rs = np.sqrt(xs ** 2 + ys ** 2)
+        ts = np.arctan2(ys, xs)
+        if n >= 0:
+            psi2 = fle.cs[ind]*spl.jv(n,lmds[np.abs(n),k-1]*rs)*np.cos(n*ts)*( rs <= 1 ) *fle.h
+        else:
+            psi2 = fle.cs[ind]*spl.jv(np.abs(n),lmds[np.abs(n),k-1]*rs)*np.sin(np.abs(n)*ts)*( rs <= 1 )*fle.h
+
+        if n != 0:
+            psi2 *= np.sqrt(2)
+
+        print(np.linalg.norm(psi0-psi2), np.linalg.norm(psi-psi2), n, k)
+
 
 
 
