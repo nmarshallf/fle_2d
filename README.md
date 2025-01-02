@@ -3,7 +3,7 @@
 Installing in conda environment
 
 ```bash
-conda create -n fle 
+conda create --name fle python=3.9 pip
 conda activate fle
 conda install -c conda-forge pip numpy scipy joblib matplotlib finufft
 pip install fle-2d
