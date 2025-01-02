@@ -43,3 +43,46 @@ Nicholas F. Marshall, Oscar Mickelin, and Amit Singer. Fast expansion into harmo
 
 # Acknowledgements
 We thank Yunpeng Shi for contributing a vectorized version of the code for tensor inputs consisting of multiples images.
+
+
+## Usage
+
+Given an image x represented by a 2D array of size LxL that you want to expand into the disk harmonic basis, first create a basis object by calling
+```python
+from fle_2d import FLEBasis2D
+L = 128         #replace this by the side-length of your image
+bandlimit = L   #maximum number of basis functions to use
+eps = 1e-7      #desired accuracy
+fle = FLEBasis2D(L, bandlimit, eps)
+```
+Here, eps is the accuracy desired in applying the basis expansion, corresponding to the epsilon in Theorem 4.1 in the paper. "Bandlimit" is a parameter that determines how many basis functions to use and corresponds to the variable lambda in equation (5.1) in the paper, scaled so that L is the maximum suggested.
+
+All arguments to FLEBasis3D:
+
+- L:    size of image to be expanded
+
+- bandlimit:    bandlimit parameter (scaled so that L is max suggested)
+
+- eps:     requested relative precision
+
+- maxitr:      maximum number of iterations for the expand method (if not specified, pre-tuned values are used)
+
+- maxfun:      maximum number of basis functions to use (if not specified, which is the default, the number implied by the choice of bandlimit is used)
+
+
+- mode:       choose either "real" or "complex" (default) output, using either real-valued or complex-valued basis functions
+
+
+    
+To go from the image to the basis coefficients, you would then call either
+
+```python
+coeff = fle.evaluate_t(x)
+```
+
+which applies the operator $\tilde{B}^*$ in Theorem 4.1 of the paper, or 
+
+```python
+coeff = fle.expand(x)
+```
+which solves a least squares problem instead of just applying equation $\tilde{B}^*$ once. The latter can be more accurate, but takes a bit longer since it applies evaluate_t ```maxitr``` times using Richardson iteration.
