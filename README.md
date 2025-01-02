@@ -47,7 +47,7 @@ We thank Yunpeng Shi for contributing a vectorized version of the code for tenso
 
 ## Usage
 
-Given an image x represented by a 2D array of size LxL that you want to expand into the disk harmonic basis, first create a basis object by calling
+Given an image represented by a 2D array of size LxL that you want to expand into the disk harmonic basis, first create a basis object by calling
 ```python
 from fle_2d import FLEBasis2D
 L = 128         #replace this by the side-length of your image
