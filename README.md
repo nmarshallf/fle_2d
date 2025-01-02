@@ -86,3 +86,11 @@ which applies the operator $\tilde{B}^*$ in Theorem 4.1 of the paper, or
 coeff = fle.expand(x)
 ```
 which solves a least squares problem instead of just applying equation $\tilde{B}^*$ once. The latter can be more accurate, but takes a bit longer since it applies evaluate_t ```maxitr``` times using Richardson iteration.
+
+Once you have coefficients ```coeff``` in the basis, you can evaluate the corresponding function with expansion coefficients ```coeff``` on the LxL grid by running
+
+```python
+volume = fle.evaluate(coeff)
+```
+
+which corresponds to applying the operator $\tilde{B}$ in Theorem 4.1 in the paper.
