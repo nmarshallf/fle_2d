@@ -57,7 +57,7 @@ fle = FLEBasis2D(L, bandlimit, eps)
 ```
 Here, eps is the accuracy desired in applying the basis expansion, corresponding to the epsilon in Theorem 4.1 in the paper. "Bandlimit" is a parameter that determines how many basis functions to use and corresponds to the variable lambda in equation (5.1) in the paper, scaled so that L is the maximum suggested.
 
-All arguments to FLEBasis3D:
+All arguments to FLEBasis2D:
 
 - L:    size of image to be expanded
 
