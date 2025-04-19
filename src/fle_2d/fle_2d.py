@@ -66,7 +66,6 @@ class FLEBasis2D:
 
         # ORIGINAL DIMENSIONS
         self.L1 = L
-        # IF DIMENSIONS ARE ODD ADD ONE (WILL BE PADDING)
         L = L + (L % 2)
 
         # see {eq:num_radial_nodes}
@@ -189,8 +188,8 @@ class FLEBasis2D:
 
         R = L // 2
         h = 1 / R
-        x = np.arange(-R, R + L % 2)
-        y = np.arange(-R, R + L % 2)
+        x = np.arange(-R, R)
+        y = np.arange(-R, R)
         xs, ys = np.meshgrid(x, y)
         xs = xs / R
         ys = ys / R
@@ -486,7 +485,7 @@ class FLEBasis2D:
 
         # ADD PADDING IF DIMENESIONS ODD
         if L > L1:
-            f = np.pad(f,((0,0),(0,1),(0,1)))
+            f = np.pad(f,((0,0),(1,0),(1,0)))
 
         # For small images just use matrix multiplication
         if L < 16:
@@ -547,7 +546,7 @@ class FLEBasis2D:
 
         # REMOVE PADDING
         if self.L > self.L1:
-            f = f[:,:self.L1,:self.L1]
+            f = f[:,1:,1:]
 
         if np.prod(a.shape) == self.ne:
             f = np.squeeze(f)
@@ -701,8 +700,8 @@ class FLEBasis2D:
         # Evaluate eigenfunctions
         R = self.L // 2
         h = 1 / R
-        x = np.arange(-R, R + self.L % 2)
-        y = np.arange(-R, R + self.L % 2)
+        x = np.arange(-R, R)
+        y = np.arange(-R, R)
         xs, ys = np.meshgrid(x, y)
         xs = xs / R
         ys = ys / R
@@ -733,7 +732,7 @@ class FLEBasis2D:
 
         # REMOVE ODD PADDING
         if self.L > self.L1:
-            B = B[:self.L1,:self.L1,:]
+            B = B[1:,1:,:]
 
         B = B.reshape(self.L1 ** 2, self.ne)
 

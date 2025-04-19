@@ -1,11 +1,14 @@
 import matplotlib.pyplot as plt
 import time
+import os
 from os.path import exists
 from scipy.io import savemat
+import sys
+# uncomment depending on location of file to test
+#sys.path.append(os.path.abspath("../src/fle_2d"))
 from fle_2d import FLEBasis2D
 import numpy as np
 from scipy.io import loadmat
-import os
 import scipy.special as spl
 
 def main():
@@ -47,7 +50,14 @@ def main():
     # test9: check conventions
     print("test 9")
     test9(32)
+
+    # test10: visualize eigenfunctions for odd and even L to check conventions
+    print("test 10")
+    test10_visualize_eigenfunctions_for_odd_even_L()
+
     plt.show()
+
+
     return
 
 def test1_fle_vs_dense():
@@ -780,6 +790,28 @@ def test9(L):
             psi2 *= np.sqrt(2)
 
         print(np.linalg.norm(psi0-psi2), np.linalg.norm(psi-psi2), n, k)
+
+
+def test10_visualize_eigenfunctions_for_odd_even_L():
+    L = 8
+    bandlimit = L
+    eps = 1e-6
+    fle = FLEBasis2D(L, bandlimit, eps, mode="real")
+    B = fle.create_denseB()
+    psi = B[:,3].reshape(L,L)
+    plt.figure()
+    plt.title("L=8 3rd eigenfuction")
+    plt.imshow(psi)
+
+    L = 7
+    bandlimit = L
+    eps = 1e-6
+    fle = FLEBasis2D(L, bandlimit, eps, mode="real")
+    B = fle.create_denseB()
+    psi = B[:,3].reshape(L,L)
+    plt.figure()
+    plt.title("L=7 3rd eigenfuction")
+    plt.imshow(psi)
 
 
 
