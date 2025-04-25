@@ -99,20 +99,6 @@ class FLEBasis2D:
         b_sz = (n_interp, 2 * nmax + 1)
         b = np.zeros(b_sz)
 
-        ndx = 2 * np.abs(ns) - (ns < 0)
-        ndmax = np.max(ndx)
-        idx_list = [None] * (ndmax + 1)
-        for i in range(ndmax + 1):
-            idx_list[i] = []
-        for i in range(ne):
-            nd = ndx[i]
-            idx_list[nd].append(i)
-
-        nmax = np.max(np.abs(ns))
-        v = 0
-        for i in range(len(idx_list)):
-            v = max(len(idx_list[i]), v)
-
         # Source points
         xs = 1 - (2 * np.arange(n_interp) + 1) / (2 * n_interp)
         xs = np.cos(np.pi * xs)
@@ -122,8 +108,6 @@ class FLEBasis2D:
 
         if ne == 1:
             lmd1 = lmd1 * (1 + 2e-16)
-
-        a = np.zeros(ne, dtype=np.float64)
 
         # Make a list of lists: idx_list[i] is the index of all values i
         ndx = 2 * np.abs(ns) - (ns < 0)
