@@ -23,7 +23,6 @@ class FLEBasis2D:
         bandlimit,
         eps,
         expand_eps=1e-4,
-        expand_alpha=0.5,
         expand_rel_tol=1e-3,
         maxitr=None,
         maxfun=None,
@@ -37,7 +36,6 @@ class FLEBasis2D:
         self.complexmode = complexmode
 
 
-        self.expand_alpha = expand_alpha
         self.expand_rel_tol = expand_rel_tol
         self.expand_eps = expand_eps
 
