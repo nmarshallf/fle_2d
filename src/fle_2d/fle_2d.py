@@ -6,7 +6,7 @@ import finufft
 from scipy.io import loadmat
 from joblib import Parallel, delayed
 import os
-
+from scipy.sparse.linalg import LinearOperator, cg
 
 class FLEBasis2D:
     #
@@ -23,7 +23,6 @@ class FLEBasis2D:
         bandlimit,
         eps,
         expand_eps=1e-4,
-        expand_alpha=0.5,
         expand_rel_tol=1e-3,
         maxitr=None,
         maxfun=None,
@@ -37,7 +36,6 @@ class FLEBasis2D:
         self.complexmode = complexmode
 
 
-        self.expand_alpha = expand_alpha
         self.expand_rel_tol = expand_rel_tol
         self.expand_eps = expand_eps
 
@@ -568,20 +566,13 @@ class FLEBasis2D:
 
         return f
 
-    def expand(self, f, toltype='l1linf'):
-        b = self.evaluate_t(f)
-        a0 = self.expand_alpha*b
-        if toltype == 'l1linf':
-            no = np.linalg.norm(a0,np.inf)
-            n1 = 1
-        elif toltype == 'l2':
-            no = np.linalg.norm(a0,2)
-            n1 = 2
-        for iter in range(self.maxitr):
-            a0old = a0
-            a0 = a0 - self.expand_alpha*(self.evaluate_t(self.evaluate(a0))) + self.expand_alpha*b
-            if np.linalg.norm(a0-a0old,n1)/no < self.expand_rel_tol:
-                break
+    def expand(self, f):
+        b = self.evaluate_t(f).reshape(-1,1)
+        operator = LinearOperator(
+            shape=(self.ne, self.ne),
+            matvec=lambda v: self.evaluate_t(self.evaluate(v))
+        )
+        a0,_ = cg(operator, b, rtol=self.expand_rel_tol, maxiter=self.maxitr)
         return a0
 
 
