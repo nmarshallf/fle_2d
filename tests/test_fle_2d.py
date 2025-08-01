@@ -572,7 +572,7 @@ def test7_helper(L, eps):
 
     # Basis pre-computation
     bandlimit = L
-    fle = FLEBasis2D(L, bandlimit, eps)
+    fle = FLEBasis2D(L, bandlimit, eps, expand_rel_tol=eps, expand_eps=eps)
     t1 = time.time()
 
     # load example image
