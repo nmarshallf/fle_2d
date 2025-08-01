@@ -23,6 +23,7 @@ class FLEBasis2D:
         bandlimit,
         eps,
         expand_eps=1e-4,
+        expand_alpha=0.5,
         expand_rel_tol=1e-3,
         maxitr=None,
         maxfun=None,
@@ -40,20 +41,24 @@ class FLEBasis2D:
         self.expand_eps = expand_eps
 
         # Heuristics for choosing numsparse and maxitr
-        if not maxitr:
-            maxitr = 1 + int(3 * np.log2(L))
         numsparse = 32
         if eps >= 1e-10:
             numsparse = 22
-            if not maxitr:
-                maxitr = 1 + int(2 * np.log2(L))
         if eps >= 1e-7:
             numsparse = 16
-            if not maxitr:
-                maxitr = 1 + int(np.log2(L))
         if eps >= 1e-4:
             numsparse = 8
-            if not maxitr:
+
+        if not maxitr:
+            maxitr = 1 + int(3 * np.log2(L))
+
+        if not maxitr:
+            maxitr = 1 + int(3 * np.log2(L))
+            if expand_eps >= 1e-10:
+                maxitr = 1 + int(2 * np.log2(L))
+            if expand_eps >= 1e-7:
+                maxitr = 1 + int(np.log2(L))
+            if expand_eps >= 1e-4:
                 maxitr = 1 + int(np.log2(L)) // 2
 
         #sets maxitr heuristically
@@ -566,14 +571,32 @@ class FLEBasis2D:
 
         return f
 
-    def expand(self, f):
-        b = self.evaluate_t(f).reshape(-1,1)
-        operator = LinearOperator(
-            shape=(self.ne, self.ne),
-            matvec=lambda v: self.evaluate_t(self.evaluate(v))
-        )
-        a0,_ = cg(operator, b, rtol=self.expand_rel_tol, maxiter=self.maxitr)
-        return a0
+    def expand(self, f, solver='CG',toltype='l1linf'):
+
+        if solver == 'richardson':
+            b = self.evaluate_t(f)
+            a0 = self.expand_alpha*b
+            if toltype == 'l1linf':
+                no = np.linalg.norm(a0,np.inf)
+                n1 = 1
+            elif toltype == 'l2':
+                no = np.linalg.norm(a0,2)
+                n1 = 2
+            for iter in range(self.maxitr):
+                a0old = a0
+                a0 = a0 - self.expand_alpha*(self.evaluate_t(self.evaluate(a0))) + self.expand_alpha*b
+                if np.linalg.norm(a0-a0old,n1)/no < self.expand_rel_tol:
+                    break
+            return a0
+        
+        if solver == 'CG':
+            b = self.evaluate_t(f).reshape(-1,1)
+            operator = LinearOperator(
+                shape=(self.ne, self.ne),
+                matvec=lambda v: self.evaluate_t(self.evaluate(v))
+            )
+            a0,_ = cg(operator, b, rtol=self.expand_rel_tol, maxiter=self.maxitr)
+            return a0
 
 
     def step1(self, f):
