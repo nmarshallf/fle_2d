@@ -66,6 +66,7 @@ All arguments to FLEBasis2D:
 - eps:     requested relative precision
 
 - expand_eps:      requested approximate relative precision in the expand method (if not specified, pre-tuned values are used)
+- expand_alpha:    requested step-size in the expand method (if not specified, pre-tuned values are used)
 - expand_rel_tol:  requested relative tolerance in the expand method (if not specified, pre-tuned values are used)
 
 - maxitr:      maximum number of iterations for the expand method (if not specified, pre-tuned values are used)
