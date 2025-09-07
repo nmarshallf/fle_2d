@@ -111,28 +111,11 @@ class FLEBasis2D:
         else:
             ne = int(L ** 2 * np.pi / 4)
 
-        max_bandlimit = L
-        psi, ns, ks, lmds, cs, ne = self.lap_eig_disk(
-            ne, bandlimit, max_bandlimit
-        )
+        psi, ns, ks, lmds, cs, ne = self.lap_eig_disk(ne, bandlimit)
 
         nmax = np.max(np.abs(ns))
         b_sz = (n_interp, 2 * nmax + 1)
         b = np.zeros(b_sz)
-
-        ndx = 2 * np.abs(ns) - (ns < 0)
-        ndmax = np.max(ndx)
-        idx_list = [None] * (ndmax + 1)
-        for i in range(ndmax + 1):
-            idx_list[i] = []
-        for i in range(ne):
-            nd = ndx[i]
-            idx_list[nd].append(i)
-
-        nmax = np.max(np.abs(ns))
-        v = 0
-        for i in range(len(idx_list)):
-            v = max(len(idx_list[i]), v)
 
         # Source points
         xs = 1 - (2 * np.arange(n_interp) + 1) / (2 * n_interp)
@@ -143,8 +126,6 @@ class FLEBasis2D:
 
         if ne == 1:
             lmd1 = lmd1 * (1 + 2e-16)
-
-        a = np.zeros(ne, dtype=np.float64)
 
         # Make a list of lists: idx_list[i] is the index of all values i
         ndx = 2 * np.abs(ns) - (ns < 0)
@@ -168,7 +149,6 @@ class FLEBasis2D:
         if numsparse <= 0:
             ws = self.get_weights(xs)
 
-        a = np.zeros(ne, dtype=np.float64)
         A3 = [None] * (ndmax + 1)
         A3_T = [None] * (ndmax + 1)
         for i in range(ndmax + 1):
@@ -192,9 +172,7 @@ class FLEBasis2D:
                 )
             else:
                 A3[i] = np.zeros((n, mm))
-                numer = np.zeros(n)
                 denom = np.zeros(n)
-                exact = np.zeros(n)
                 for j in range(mm):
                     xdiff = x - xs[j]
                     temp = ws[j] / xdiff
@@ -354,7 +332,6 @@ class FLEBasis2D:
 
     def radialconv_wts(self, b):
 
-        ne = self.ne
         nb = b.shape[0]
         b = np.array(b, order="F")
         if self.n_interp > self.n_radial:
@@ -363,14 +340,11 @@ class FLEBasis2D:
             b = np.concatenate((b, bz), axis=1)
             b = idct(b, axis=1, type=2) * 2 * b.shape[1]
 
-        h = self.h
-
         b = np.moveaxis(b, 0, -1)
 
         a = np.zeros((self.ne, nb), dtype=np.float64)
 
 
-        y = [None] * (self.ndmax + 1)
         for i in range(self.ndmax + 1):
             a[self.idx_list[i]] = (self.A3[i] @ b[:, 0, :])
 
@@ -780,7 +754,7 @@ class FLEBasis2D:
 
         return B.reshape(self.L1 ** 2, self.ne)
 
-    def lap_eig_disk(self, ne, bandlimit, max_bandlimit):
+    def lap_eig_disk(self, ne, bandlimit):
 
         # number of roots to check
         nc = int(3 * np.sqrt(ne))
@@ -1006,8 +980,6 @@ class FLEBasis2D:
         jdx = np.zeros((n, s))
         vals = np.zeros((n, s))
         xss = np.zeros((n, s))
-        idps = np.zeros((n, s))
-        numer = np.zeros((n, 1))
         denom = np.zeros((n, 1))
         temp = np.zeros((n, 1))
         ws = np.zeros((n, s))
