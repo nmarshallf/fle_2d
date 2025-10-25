@@ -76,7 +76,7 @@ All arguments to FLEBasis2D:
 
 - mode:       choose either "real" or "complex" (default) output, using either real-valued or complex-valued basis functions
 
-
+- precision:   choose either "double" or "single"
     
 To go from the image to the basis coefficients, you would then call either
 
@@ -89,7 +89,7 @@ which applies the operator $\tilde{B}^*$ in Theorem 4.1 of the paper, or
 ```python
 coeff = fle.expand(image)
 ```
-which solves a least squares problem instead of just applying equation $\tilde{B}^*$ once. The latter can be more accurate, but takes a bit longer since it applies evaluate_t ```maxitr``` times using Richardson iteration.
+which solves a least squares problem instead of just applying equation $\tilde{B}^*$ once. The latter can be more accurate, but takes a bit longer since it applies evaluate_t ```maxitr``` times using conjugate-gradient (Richardson iteration is also implemented).
 
 Once you have coefficients ```coeff``` in the basis, you can evaluate the corresponding function with expansion coefficients ```coeff``` on the LxL grid by running
 
