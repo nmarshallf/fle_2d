@@ -16,6 +16,7 @@ class FLEBasis2D:
     #   maxitr      maximum number of interations for expand method
     #   maxfun      maximum number of basis functions to use
     #   mode        choose either "real" or "complex" output
+    #   precision   choose either "double" or "single"
     #
     def __init__(
         self,
@@ -27,8 +28,16 @@ class FLEBasis2D:
         expand_rel_tol=1e-3,
         maxitr=None,
         maxfun=None,
-        mode="real"
+        mode="real",
+        precision="double"
     ):
+        self.precision = precision
+        if precision == "double":
+            self.dt = np.float64
+            self.dtc = np.complex128
+        elif precision == "single":
+            self.dt = np.float32
+            self.dtc = np.complex64
 
         realmode = mode == "real"
         complexmode = mode == "complex"
@@ -144,7 +153,7 @@ class FLEBasis2D:
         if ne == 1:
             lmd1 = lmd1 * (1 + 2e-16)
 
-        a = np.zeros(ne, dtype=np.float64)
+        a = np.zeros(ne, dtype=self.dt)
 
         # Make a list of lists: idx_list[i] is the index of all values i
         ndx = 2 * np.abs(ns) - (ns < 0)
@@ -168,7 +177,7 @@ class FLEBasis2D:
         if numsparse <= 0:
             ws = self.get_weights(xs)
 
-        a = np.zeros(ne, dtype=np.float64)
+        a = np.zeros(ne, dtype=self.dt)
         A3 = [None] * (ndmax + 1)
         A3_T = [None] * (ndmax + 1)
         for i in range(ndmax + 1):
@@ -336,16 +345,27 @@ class FLEBasis2D:
         x = x.flatten()
         y = y.flatten()
 
+        if self.precision == "single":
+            x = x.astype('float32')
+            y = y.astype('float32')
+
         self.grid_x = x
         self.grid_y = y
         nufft_type = 2
-        self.plan2 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = -1, eps=eps)
+        if self.precision == "double":
+            self.plan2 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = -1, eps=eps)
+        elif self.precision == "single":
+            self.plan2 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = -1, eps=eps, dtype='complex64')
+
         # self.plan2.setpts(x, y)
         #FINUFFT has opposite meshgrid ordering
         self.plan2.setpts(y, x)
 
         nufft_type = 1
-        self.plan1 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = 1, eps=eps)
+        if self.precision == "double":
+            self.plan1 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = 1, eps=eps)
+        elif self.precision == "single":
+            self.plan1 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = 1, eps=eps, dtype='complex64')
         # self.plan1.setpts(x, y)
         #FINUFFT has opposite meshgrid ordering
         self.plan1.setpts(y, x)
@@ -367,7 +387,7 @@ class FLEBasis2D:
 
         b = np.moveaxis(b, 0, -1)
 
-        a = np.zeros((self.ne, nb), dtype=np.float64)
+        a = np.zeros((self.ne, nb), dtype=self.dt)
 
 
         y = [None] * (self.ndmax + 1)
@@ -445,7 +465,7 @@ class FLEBasis2D:
                 idct(radial_vec, axis=0, type=2) * 2 * radial_vec.shape[0]
             )
 
-        radial_fb = np.zeros((self.ne, radial_vec.shape[1]), dtype=np.float64)
+        radial_fb = np.zeros((self.ne, radial_vec.shape[1]), dtype=self.dt)
 
         for i in range(self.ndmax + 1):
             radial_fb[self.idx_list[i], :] = self.A3[i] @ radial_vec
@@ -489,7 +509,6 @@ class FLEBasis2D:
 
     def evaluate_t(self, f):
         # see {sec:fast_details}
-
         # DIMENSIONS BEFORE PADDING
         L1 = self.L1
         # DIMENSINOS AFTER PADDING
@@ -604,14 +623,16 @@ class FLEBasis2D:
         L = self.L
         nf = f.shape[0]
         f = f.reshape(nf, L, L)
-        f = np.array(f, dtype=np.complex128)
+        f = np.array(f, dtype=self.dtc)
 
         z = np.zeros(
-            (nf, self.n_radial, self.n_angular), dtype=np.complex128
+            (nf, self.n_radial, self.n_angular), dtype=self.dtc
         )
         nufft_type = 2
-        plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps)
-
+        if self.precision == "double":
+            plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps)
+        elif self.precision == "single":
+            plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps, dtype='complex64')
         #NUFFT has opposite meshgrid ordering
         plan2v.setpts(self.grid_y, self.grid_x)
 
@@ -629,9 +650,15 @@ class FLEBasis2D:
         nz = z.shape[0]
         z = z[:, :, : self.n_angular // 2]
         nufft_type = 1
-        plan1v = finufft.Plan(
-            nufft_type, (self.L, self.L), n_trans=nz, isign=1, eps=self.eps
-        )
+        if self.precision == "double":
+            plan1v = finufft.Plan(
+                nufft_type, (self.L, self.L), n_trans=nz, isign=1, eps=self.eps
+            )
+        elif self.precision == "single":
+            plan1v = finufft.Plan(
+                nufft_type, (self.L, self.L), n_trans=nz, isign=1, eps=self.eps, dtype='complex64'
+            )
+            
 
         #NUFFT has opposite meshgrid ordering
         plan1v.setpts(self.grid_y, self.grid_x)
@@ -675,7 +702,7 @@ class FLEBasis2D:
 
         b = np.moveaxis(b, 0, -1)
 
-        a = np.zeros((self.ne, nb), dtype=np.float64)
+        a = np.zeros((self.ne, nb), dtype=self.dt)
         for i in range(self.ndmax + 1):
             a[self.idx_list[i]] = self.A3[i] @ b[:, i, :]
 
@@ -699,7 +726,7 @@ class FLEBasis2D:
         a = a.T
         b = np.zeros(
             (self.n_interp, 2 * self.nmax + 1, na),
-            dtype=np.float64,
+            dtype=self.dt,
             order="F",
         )
         for i in range(self.ndmax + 1):
@@ -718,7 +745,7 @@ class FLEBasis2D:
 
         nb = b.shape[0]
         tmp = np.zeros(
-            (b.shape[0], b.shape[1], self.n_angular), dtype=np.complex128
+            (b.shape[0], b.shape[1], self.n_angular), dtype=self.dtc
         )
 
         b = np.swapaxes(b, 0, 2)
@@ -751,7 +778,7 @@ class FLEBasis2D:
         # Compute in parallel if numthread > 1
         if numthread <= 1:
             B = np.zeros(
-                (self.L, self.L, self.ne), dtype=np.complex128, order="F"
+                (self.L, self.L, self.ne), dtype=self.dtc, order="F"
             )
             for i in range(self.ne):
                 B[:, :, i] = self.psi[i](rs, ts)
@@ -762,7 +789,7 @@ class FLEBasis2D:
                 delayed(func)(i) for i in range(self.ne)
             )
             B_par = np.zeros(
-                (self.L, self.L, self.ne), dtype=np.complex128, order="F"
+                (self.L, self.L, self.ne), dtype=self.dtc, order="F"
             )
             for i in range(self.ne):
                 B_par[:, :, i] = B_list[i]
@@ -790,7 +817,7 @@ class FLEBasis2D:
         nn = 1 + 2 * nc
         ns = np.zeros((nn, nd), dtype=int, order="F")
         ks = np.zeros((nn, nd), dtype=int, order="F")
-        lmds = np.ones((nn, nd), dtype=np.float64) * np.inf
+        lmds = np.ones((nn, nd), dtype=self.dt) * np.inf
 
         # load table of roots of jn (the scipy code has an issue where it gets
         # stuck in an infinite loop in Newton's method as of Jun 2022)
@@ -894,7 +921,7 @@ class FLEBasis2D:
         nnz = np.sum(ns == 0) + 2 * np.sum(ns != 0)
         idx = np.zeros(nnz, dtype=int)
         jdx = np.zeros(nnz, dtype=int)
-        vals = np.zeros(nnz, dtype=np.complex128)
+        vals = np.zeros(nnz, dtype=self.dtc)
 
         k = 0
         for i in range(ne):
@@ -928,7 +955,7 @@ class FLEBasis2D:
                 k = k + 1
 
         A = spr.csr_matrix(
-            (vals, (idx, jdx)), shape=(ne, ne), dtype=np.complex128
+            (vals, (idx, jdx)), shape=(ne, ne), dtype=self.dtc
         )
 
         return A
@@ -936,7 +963,7 @@ class FLEBasis2D:
     def transform_complex_to_real(self, Z, ns):
 
         ne = Z.shape[1]
-        X = np.zeros(Z.shape, dtype=np.float64)
+        X = np.zeros(Z.shape, dtype=self.dt)
 
         for i in range(ne):
             n = ns[i]
@@ -954,7 +981,7 @@ class FLEBasis2D:
     def transform_real_to_complex(self, X, ns):
 
         ne = X.shape[1]
-        Z = np.zeros(X.shape, dtype=np.complex128)
+        Z = np.zeros(X.shape, dtype=self.dtc)
 
         for i in range(ne):
             n = ns[i]
@@ -971,7 +998,7 @@ class FLEBasis2D:
 
     def rotate_multipliers(self, theta):
 
-        b = np.zeros(self.ne, dtype=np.complex128)
+        b = np.zeros(self.ne, dtype=self.dtc)
         for i in range(self.ne):
             b[i] = np.exp(1j * theta * self.ns[i])
 
@@ -1062,8 +1089,8 @@ class FLEBasis2D:
         vals = vals.flatten()
         idx = idx.flatten()
         jdx = jdx.flatten()
-        A = spr.csr_matrix((vals, (idx, jdx)), shape=(n, m), dtype=np.float64)
-        A_T = spr.csr_matrix((vals, (jdx, idx)), shape=(m, n), dtype=np.float64)
+        A = spr.csr_matrix((vals, (idx, jdx)), shape=(n, m), dtype=self.dt)
+        A_T = spr.csr_matrix((vals, (jdx, idx)), shape=(m, n), dtype=self.dt)
 
         return A, A_T
 
