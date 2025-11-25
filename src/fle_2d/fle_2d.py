@@ -357,18 +357,15 @@ class FLEBasis2D:
         elif self.precision == "single":
             self.plan2 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = -1, eps=eps, dtype='complex64')
 
-        # self.plan2.setpts(x, y)
-        #FINUFFT has opposite meshgrid ordering
-        self.plan2.setpts(y, x)
+        self.plan2.setpts(x, y)
 
         nufft_type = 1
         if self.precision == "double":
             self.plan1 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = 1, eps=eps)
         elif self.precision == "single":
             self.plan1 = finufft.Plan(nufft_type, (L, L), n_trans=1, isign = 1, eps=eps, dtype='complex64')
-        # self.plan1.setpts(x, y)
-        #FINUFFT has opposite meshgrid ordering
-        self.plan1.setpts(y, x)
+        self.plan1.setpts(x, y)
+
 
         return
 
@@ -633,8 +630,7 @@ class FLEBasis2D:
             plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps)
         elif self.precision == "single":
             plan2v = finufft.Plan(nufft_type, (L, L), n_trans=nf, isign=-1, eps=self.eps, dtype='complex64')
-        #NUFFT has opposite meshgrid ordering
-        plan2v.setpts(self.grid_y, self.grid_x)
+        plan2v.setpts(self.grid_x, self.grid_y)
 
         z0 = plan2v.execute(f) * self.h ** 2
         z0 = z0.reshape(nf, self.n_radial, self.n_angular // 2)
@@ -660,8 +656,7 @@ class FLEBasis2D:
             )
             
 
-        #NUFFT has opposite meshgrid ordering
-        plan1v.setpts(self.grid_y, self.grid_x)
+        plan1v.setpts(self.grid_x, self.grid_y)
 
         f = plan1v.execute(z.reshape(nz, -1))
         f = f + np.conj(f)
@@ -767,7 +762,7 @@ class FLEBasis2D:
         h = 1 / R
         x = np.arange(-R, R)
         y = np.arange(-R, R)
-        xs, ys = np.meshgrid(x, y)
+        xs, ys = np.meshgrid(x, y, indexing='ij')
         xs = xs / R
         ys = ys / R
         rs = np.sqrt(xs ** 2 + ys ** 2)
