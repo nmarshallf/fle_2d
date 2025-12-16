@@ -758,7 +758,7 @@ def test8_complex_fle_vs_dense_odd_helper(L, eps):
 def test9(L):
     eps = 1e-6
     script_dir = os.path.dirname(__file__)
-    zeros_path = os.path.join(script_dir, "../..", "src", "fle_2d", "jn_zeros_n=3000_nt=2500.mat")
+    zeros_path = os.path.join(script_dir, "..", "src", "fle_2d", "jn_zeros_n=3000_nt=2500.mat")
     data = loadmat(zeros_path)
     lmds = data["roots_table"]
     bandlimit = L
