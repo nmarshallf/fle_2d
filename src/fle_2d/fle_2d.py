@@ -750,7 +750,7 @@ class FLEBasis2D:
         b = np.swapaxes(b, 0, 2)
 
         tmp[:, :, self.nus] = ((-1j)**self.nus)*b
-        z = np.fft.ifft(tmp, axis=2)
+        z = np.fft.ifft(tmp, axis=2).astype(self.dtc)
 
         return z
 
