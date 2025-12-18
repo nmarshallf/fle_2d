@@ -7,6 +7,8 @@ from scipy.io import loadmat
 from joblib import Parallel, delayed
 import os
 from scipy.sparse.linalg import LinearOperator, cg
+from scipy.fft import fft as sfft
+from scipy.fft import ifft as isfft
 
 class FLEBasis2D:
     #
@@ -375,10 +377,10 @@ class FLEBasis2D:
         nb = b.shape[0]
         b = np.array(b, order="F")
         if self.n_interp > self.n_radial:
-            b = dct(b, axis=1, type=2) / (2 * self.n_radial)
+            b = dct(b, axis=1, type=2, workers=-1) / (2 * self.n_radial)
             bz = np.zeros(b.shape)
             b = np.concatenate((b, bz), axis=1)
-            b = idct(b, axis=1, type=2) * 2 * b.shape[1]
+            b = idct(b, axis=1, type=2, workers=-1) * 2 * b.shape[1]
 
         h = self.h
 
@@ -455,11 +457,11 @@ class FLEBasis2D:
 
         radial_vec = radial_vec.T
         if self.n_interp > self.n_radial:
-            radial_vec = dct(radial_vec, axis=0, type=2) / (2 * self.n_radial)
+            radial_vec = dct(radial_vec, axis=0, type=2, workers=-1) / (2 * self.n_radial)
             radial_vec_z = np.zeros(radial_vec.shape)
             radial_vec = np.concatenate((radial_vec, radial_vec_z), axis=0)
             radial_vec = (
-                idct(radial_vec, axis=0, type=2) * 2 * radial_vec.shape[0]
+                idct(radial_vec, axis=0, type=2, workers=-1) * 2 * radial_vec.shape[0]
             )
 
         radial_fb = np.zeros((self.ne, radial_vec.shape[1]), dtype=self.dt)
@@ -670,7 +672,7 @@ class FLEBasis2D:
 
         nz = z.shape[0]
         z = z.reshape(nz, self.n_radial, self.n_angular)
-        b = np.fft.fft(z, n=self.n_angular, axis=2) / self.n_angular
+        b = sfft(z, n=self.n_angular, axis=2, workers=-1) / self.n_angular
         b = b[:, :, self.nus]
 
         b = np.swapaxes(b, 0, 2)
@@ -688,10 +690,10 @@ class FLEBasis2D:
         nb = b.shape[0]
 
         if self.n_interp > self.n_radial:
-            b = dct(b, axis=1, type=2) / (2 * self.n_radial)
+            b = dct(b, axis=1, type=2, workers=-1) / (2 * self.n_radial)
             bz = np.zeros(b.shape)
             b = np.concatenate((b, bz), axis=1)
-            b = idct(b, axis=1, type=2) * 2 * b.shape[1]
+            b = idct(b, axis=1, type=2, workers=-1) * 2 * b.shape[1]
 
         h = self.h
 
@@ -730,9 +732,9 @@ class FLEBasis2D:
         b = np.moveaxis(b, -1, 0)
 
         if self.n_interp > self.n_radial:
-            b = dct(b, axis=1, type=2)
+            b = dct(b, axis=1, type=2, workers=-1)
             b = b[:, : self.n_radial, :]
-            b = idct(b, axis=1, type=2)
+            b = idct(b, axis=1, type=2, workers=-1)
 
         return b
 
@@ -750,7 +752,7 @@ class FLEBasis2D:
         b = np.swapaxes(b, 0, 2)
 
         tmp[:, :, self.nus] = ((-1j)**self.nus)*b
-        z = np.fft.ifft(tmp, axis=2).astype(self.dtc)
+        z = isfft(tmp, axis=2, workers=-1).astype(self.dtc)
 
         return z
 
